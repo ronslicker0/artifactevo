@@ -1,0 +1,36 @@
+version: "1.0"
+
+# Artifacts to evolve — add entries with `evo add <name> <path>`
+artifacts: {}
+
+# LLM configuration (required for mutations and optional LLM-judge scoring)
+llm:
+  provider: anthropic       # anthropic | openai | claude-code
+  model: claude-sonnet-4-20250514
+  auth_env: ANTHROPIC_API_KEY
+
+# Evolution settings
+evolution:
+  budget_per_session: 10    # max mutations per session
+  feedback_interval: 3      # heuristic anti-pattern check every N runs
+  outer_interval: 10        # meta-strategy revision every M runs
+  plateau_window: 5         # score window for plateau detection
+
+# Automation
+automation:
+  hook_mode: false          # auto-evolve when Claude Code hooks fire
+  daemon_mode: false        # run background daemon on schedule
+  daemon_schedule: "*/30 * * * *"
+  trigger_after: 1          # evolve after every N new runs
+  cooldown_minutes: 10      # min gap between auto-evolution sessions
+  auto_commit: true         # git commit improved artifacts automatically
+  auto_push: false          # require manual push (safety default)
+  max_regressions_before_pause: 3
+
+# Dashboard
+dashboard:
+  port: 4200
+  open_browser: true
+
+# Meta-strategy file (self-improving mutation strategy)
+meta_strategy_path: .evo/meta-strategy.md

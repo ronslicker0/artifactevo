@@ -1,0 +1,33 @@
+{
+  "name": "artifactevo",
+  "version": "0.1.0",
+  "description": "Automated artifact evolution system — evolve prompts, configs, templates, and code through trace-driven mutation loops",
+  "type": "module",
+  "bin": {
+    "evo": "./dist/bin/evo.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx bin/evo.ts",
+    "test": "vitest run",
+    "lint": "eslint src/ bin/ --ext .ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "commander": "^12.1.0",
+    "diff": "^7.0.0",
+    "js-yaml": "^4.1.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/diff": "^7.0.0",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.17.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
