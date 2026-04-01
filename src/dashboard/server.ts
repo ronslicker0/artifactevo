@@ -236,6 +236,72 @@ export async function startDashboard(
     }
   });
 
+  // ── API: Test Connection ─────────────────────────────────────────────
+  app.post('/api/test-connection', async (c) => {
+    const body = await c.req.json<{
+      provider: string;
+      model: string;
+      api_key?: string;
+      oauth_token?: string;
+      base_url?: string;
+    }>();
+
+    const tempConfig = {
+      provider: body.provider as 'anthropic' | 'openai' | 'ollama' | 'claude-code',
+      model: body.model,
+      api_key: body.api_key,
+      oauth_token: body.oauth_token,
+      base_url: body.base_url,
+    };
+
+    const { testConnection } = await import('../llm/test-connection.js');
+    const result = await testConnection(tempConfig);
+    return c.json(result);
+  });
+
+  // ── API: Save Config ────────────────────────────────────────────────
+  app.post('/api/config', async (c) => {
+    const body = await c.req.json();
+    const configPath = join(absEvoDir, 'config.yaml');
+
+    try {
+      const yaml = await import('js-yaml');
+      let existing: Record<string, unknown> = {};
+      if (existsSync(configPath)) {
+        existing = yaml.default.load(readFileSync(configPath, 'utf-8')) as Record<string, unknown>;
+      }
+      const merged = { ...existing, ...body };
+      writeFileSync(configPath, yaml.default.dump(merged, { lineWidth: 120 }), 'utf-8');
+      return c.json({ success: true });
+    } catch (err) {
+      return c.json({ success: false, error: String(err) }, 500);
+    }
+  });
+
+  // ── API: Full Config (masked) ───────────────────────────────────────
+  app.get('/api/config/full', async (c) => {
+    const configPath = join(absEvoDir, 'config.yaml');
+    if (!existsSync(configPath)) return c.json({ error: 'Not initialized' }, 404);
+
+    try {
+      const yaml = await import('js-yaml');
+      const raw = readFileSync(configPath, 'utf-8');
+      const config = yaml.default.load(raw) as Record<string, Record<string, unknown>>;
+
+      // Mask sensitive values but indicate they exist
+      if (config.llm?.api_key) {
+        config.llm.api_key = '***' + String(config.llm.api_key).slice(-4);
+      }
+      if (config.llm?.oauth_token) {
+        config.llm.oauth_token = '***' + String(config.llm.oauth_token).slice(-4);
+      }
+
+      return c.json(config);
+    } catch (err) {
+      return c.json({ error: String(err) }, 500);
+    }
+  });
+
   // ── API: Pause / Resume ─────────────────────────────────────────────
   app.post('/api/pause', (c) => {
     const signalPath = join(absEvoDir, 'pause-signal');

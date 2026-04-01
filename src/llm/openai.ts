@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import type { LLMProvider, LLMMessage, LLMResponse, LLMGenerateOptions } from './provider.js';
+import type { ResolvedCredentials } from './credentials.js';
 
 // ── OpenAI Provider ─────────────────────────────────────────────────────
 
@@ -7,30 +8,18 @@ export class OpenAIProvider implements LLMProvider {
   private client: OpenAI;
   private model: string;
 
-  constructor(model: string, authEnv?: string, oauthTokenEnv?: string) {
-    // Prefer OAuth token if provided, then fall back to API key
-    let apiKey: string | undefined;
+  constructor(model: string, credentials: ResolvedCredentials) {
+    // OAuth tokens and API keys both go through the same apiKey field for OpenAI
+    const key = credentials.oauthToken ?? credentials.apiKey;
 
-    if (oauthTokenEnv) {
-      apiKey = process.env[oauthTokenEnv];
-      if (apiKey) {
-        // OAuth tokens are passed as Bearer tokens via the same apiKey field
-        this.client = new OpenAI({ apiKey });
-        this.model = model;
-        return;
-      }
-    }
-
-    const envVar = authEnv ?? 'OPENAI_API_KEY';
-    apiKey = process.env[envVar];
-
-    if (!apiKey) {
+    if (!key) {
       throw new Error(
-        `OpenAI API key not found. Set the ${envVar} environment variable.`
+        'OpenAI requires either an API key or OAuth token. ' +
+        'Set api_key / auth_env or oauth_token / oauth_token_env in your config.'
       );
     }
 
-    this.client = new OpenAI({ apiKey });
+    this.client = new OpenAI({ apiKey: key });
     this.model = model;
   }
 

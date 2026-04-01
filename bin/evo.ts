@@ -14,6 +14,7 @@ import { createProvider } from '../src/llm/factory.js';
 import { detectAntiPatterns } from '../src/detection/anti-patterns.js';
 import { startDaemon, readDaemonPid } from '../src/automation/daemon.js';
 import { hookTrigger } from '../src/automation/hook-trigger.js';
+import { runInitWizard } from '../src/wizard/init.js';
 
 // ── ANSI Colors ─────────────────────────────────────────────────────────
 
@@ -53,13 +54,21 @@ program
   .command('init')
   .description('Initialize .evo/ directory with config.yaml from template')
   .option('--preset <type>', 'preset type (default: standard)', 'standard')
-  .action((_opts) => {
+  .option('--no-interactive', 'skip interactive wizard')
+  .action(async (opts) => {
     const evoDir = resolveEvoDir();
 
     if (existsSync(evoDir)) {
       console.log(yellow('Warning: .evo/ directory already exists'));
     }
 
+    // Interactive wizard when running in a TTY and not explicitly disabled
+    if (process.stdin.isTTY && opts.interactive !== false) {
+      await runInitWizard(evoDir);
+      return;
+    }
+
+    // Non-interactive fallback
     // Create directory structure
     mkdirSync(join(evoDir, 'pending'), { recursive: true });
     mkdirSync(join(evoDir, 'traces', 'runs'), { recursive: true });
@@ -602,11 +611,14 @@ program
   .command('dashboard')
   .description('Open the ArtifactEvo web dashboard')
   .option('-p, --port <port>', 'Port number', '4200')
+  .option('--evo-dir <path>', 'Path to .evo directory', '.evo')
   .action(async (opts) => {
     const { startDashboard } = await import('../src/dashboard/server.js');
+    const evoDir = resolve(opts.evoDir ?? '.evo');
+    const configPath = join(evoDir, 'config.yaml');
     let config: EvoConfig;
     try {
-      config = loadConfig(resolveConfigPath({}));
+      config = loadConfig(configPath);
     } catch {
       // Not initialized — start dashboard anyway with defaults
       config = {
@@ -620,7 +632,8 @@ program
       };
     }
     const port = parseInt(opts.port, 10);
-    await startDashboard(port, resolve('.evo'), config.dashboard.open_browser);
+    const openBrowser = opts.evoDir ? false : config.dashboard.open_browser;
+    await startDashboard(port, evoDir, openBrowser);
   });
 
 // ── Parse ───────────────────────────────────────────────────────────────

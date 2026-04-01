@@ -25,7 +25,9 @@ const ArtifactConfigSchema = z.object({
 const LLMConfigSchema = z.object({
   provider: z.enum(['anthropic', 'openai', 'ollama', 'claude-code']),
   model: z.string(),
+  api_key: z.string().optional(),
   auth_env: z.string().optional(),
+  oauth_token: z.string().optional(),
   oauth_token_env: z.string().optional(),
   base_url: z.string().optional(),
 });

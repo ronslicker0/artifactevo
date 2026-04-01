@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { LLMProvider, LLMMessage, LLMResponse, LLMGenerateOptions } from './provider.js';
+import type { ResolvedCredentials } from './credentials.js';
 
 // ── Anthropic Provider ───────────────────────────────────────────────────
 
@@ -7,17 +8,18 @@ export class AnthropicProvider implements LLMProvider {
   private client: Anthropic;
   private model: string;
 
-  constructor(model: string, apiKeyEnv?: string) {
-    const envVar = apiKeyEnv ?? 'ANTHROPIC_API_KEY';
-    const apiKey = process.env[envVar];
-
-    if (!apiKey) {
+  constructor(model: string, credentials: ResolvedCredentials) {
+    if (credentials.oauthToken) {
+      this.client = new Anthropic({ authToken: credentials.oauthToken });
+    } else if (credentials.apiKey) {
+      this.client = new Anthropic({ apiKey: credentials.apiKey });
+    } else {
       throw new Error(
-        `Anthropic API key not found. Set the ${envVar} environment variable.`
+        'Anthropic requires either an API key or OAuth token. ' +
+        'Set api_key / auth_env or oauth_token / oauth_token_env in your config.'
       );
     }
 
-    this.client = new Anthropic({ apiKey });
     this.model = model;
   }
 

@@ -3,6 +3,7 @@ import { AnthropicProvider } from './anthropic.js';
 import { OpenAIProvider } from './openai.js';
 import { OllamaProvider } from './ollama.js';
 import { ClaudeCodeProvider } from './claude-code.js';
+import { resolveCredentials } from './credentials.js';
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -32,19 +33,14 @@ export interface LLMProvider {
  * Create an LLM provider instance based on config.
  */
 export function createProvider(config: LLMConfig): LLMProvider {
+  const creds = resolveCredentials(config);
+
   switch (config.provider) {
     case 'anthropic':
-      return new AnthropicProvider(
-        config.model,
-        config.oauth_token_env ?? config.auth_env
-      );
+      return new AnthropicProvider(config.model, creds);
 
     case 'openai':
-      return new OpenAIProvider(
-        config.model,
-        config.auth_env,
-        config.oauth_token_env
-      );
+      return new OpenAIProvider(config.model, creds);
 
     case 'ollama':
       return new OllamaProvider(config.model, config.base_url);

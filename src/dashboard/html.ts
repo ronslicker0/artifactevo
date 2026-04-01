@@ -9,6 +9,9 @@ export function getDashboardHTML(): string {
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>ArtifactEvo Dashboard</title>
+<script type="importmap">
+{"imports":{"preact":"https://unpkg.com/preact@10.25.4/dist/preact.module.js","preact/hooks":"https://unpkg.com/preact@10.25.4/hooks/dist/hooks.module.js","htm":"https://unpkg.com/htm@3.1.1/dist/htm.module.js"}}
+</script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#0f1117;--surface:#1a1d27;--surface2:#252833;--border:#2e3140;--text:#e0e0e6;--text2:#8b8fa3;--green:#22c55e;--red:#ef4444;--yellow:#eab308;--blue:#3b82f6;--purple:#a855f7}
@@ -64,14 +67,32 @@ pre{background:var(--surface2);border-radius:6px;padding:12px;overflow-x:auto;fo
 .indicator{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
 .indicator.on{background:var(--green)}
 .indicator.off{background:var(--text2)}
+.settings-form{display:flex;flex-direction:column;gap:24px}
+.form-section{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px}
+.form-section h3{font-size:15px;font-weight:600;margin-bottom:16px;color:var(--text)}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:13px;color:var(--text2);font-weight:500}
+.form-row-inline{display:flex;gap:12px;align-items:center}
+.form-row-inline label{font-size:13px;color:var(--text2);cursor:pointer}
+.radio-group{display:flex;gap:16px;margin-bottom:8px}
+.test-btn{background:var(--surface2);color:var(--text);padding:8px 16px;border:1px solid var(--border)}
+.test-btn:hover{border-color:var(--blue)}
+.test-result{font-size:13px;margin-top:8px;padding:8px 12px;border-radius:4px}
+.test-result.success{background:rgba(34,197,94,.1);color:var(--green)}
+.test-result.error{background:rgba(239,68,68,.1);color:var(--red)}
+.save-bar{display:flex;gap:12px;align-items:center;padding-top:8px}
+.save-msg{font-size:13px}
+.settings-warning{background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.3);border-radius:6px;padding:12px;font-size:12px;color:var(--yellow);margin-bottom:16px}
+.toggle-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.toggle-row input[type="checkbox"]{width:18px;height:18px;accent-color:var(--blue)}
 </style>
 </head>
 <body>
 <div id="app"></div>
 <script type="module">
-import{h,render,Fragment}from'https://unpkg.com/preact@10.25.4/dist/preact.module.js';
-import{useState,useEffect,useCallback,useRef}from'https://unpkg.com/preact@10.25.4/hooks/dist/hooks.module.js';
-import htm from'https://unpkg.com/htm@3.1.1/dist/htm.module.js';
+import{h,render,Fragment}from'preact';
+import{useState,useEffect,useCallback,useRef}from'preact/hooks';
+import htm from'htm';
 const html=htm.bind(h);
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -375,18 +396,209 @@ function Traces(){
 
 // ── Settings Tab ─────────────────────────────────────────────────────
 function Settings(){
-  const[config,setConfig]=useState(null);
-  useEffect(()=>{api('config').then(d=>{if(!d.error)setConfig(d)})},[]);
-  if(!config)return html\`<div class="empty">Loading config...</div>\`;
-  return html\`
-    <div class="panel">
-      <h3 class="mb">Current Configuration</h3>
-      <pre>\${JSON.stringify(config,null,2)}</pre>
+  const[loading,setLoading]=useState(true);
+  // LLM
+  const[provider,setProvider]=useState('anthropic');
+  const[authMode,setAuthMode]=useState('api_key');
+  const[apiKey,setApiKey]=useState('');
+  const[oauthToken,setOauthToken]=useState('');
+  const[model,setModel]=useState('');
+  const[baseUrl,setBaseUrl]=useState('');
+  // Evolution
+  const[budgetPerSession,setBudgetPerSession]=useState(10);
+  const[feedbackInterval,setFeedbackInterval]=useState(3);
+  const[outerInterval,setOuterInterval]=useState(10);
+  const[plateauWindow,setPlateauWindow]=useState(5);
+  // Automation
+  const[hookMode,setHookMode]=useState(false);
+  const[daemonMode,setDaemonMode]=useState(false);
+  const[autoCommit,setAutoCommit]=useState(true);
+  const[autoPush,setAutoPush]=useState(false);
+  const[triggerAfter,setTriggerAfter]=useState(1);
+  const[cooldownMinutes,setCooldownMinutes]=useState(10);
+  const[maxRegressions,setMaxRegressions]=useState(3);
+  const[daemonSchedule,setDaemonSchedule]=useState('');
+  // Dashboard
+  const[dashPort,setDashPort]=useState(4200);
+  const[openBrowser,setOpenBrowser]=useState(true);
+  // UI state
+  const[testResult,setTestResult]=useState(null);
+  const[testing,setTesting]=useState(false);
+  const[saving,setSaving]=useState(false);
+  const[saveMsg,setSaveMsg]=useState(null);
+
+  const modelPlaceholders={anthropic:'claude-sonnet-4-20250514',openai:'gpt-4o',ollama:'llama3','claude-code':'claude-sonnet-4-20250514'};
+
+  useEffect(()=>{
+    api('config/full').then(d=>{
+      if(d.error){setLoading(false);return}
+      if(d.llm){
+        if(d.llm.provider)setProvider(d.llm.provider);
+        if(d.llm.model)setModel(d.llm.model);
+        if(d.llm.base_url)setBaseUrl(d.llm.base_url);
+        if(d.llm.api_key)setApiKey(d.llm.api_key);
+        if(d.llm.oauth_token){setOauthToken(d.llm.oauth_token);setAuthMode('oauth_token')}
+      }
+      if(d.evolution){
+        if(d.evolution.budget_per_session!=null)setBudgetPerSession(d.evolution.budget_per_session);
+        if(d.evolution.feedback_interval!=null)setFeedbackInterval(d.evolution.feedback_interval);
+        if(d.evolution.outer_interval!=null)setOuterInterval(d.evolution.outer_interval);
+        if(d.evolution.plateau_window!=null)setPlateauWindow(d.evolution.plateau_window);
+      }
+      if(d.automation){
+        if(d.automation.hook_mode!=null)setHookMode(d.automation.hook_mode);
+        if(d.automation.daemon_mode!=null)setDaemonMode(d.automation.daemon_mode);
+        if(d.automation.auto_commit!=null)setAutoCommit(d.automation.auto_commit);
+        if(d.automation.auto_push!=null)setAutoPush(d.automation.auto_push);
+        if(d.automation.trigger_after!=null)setTriggerAfter(d.automation.trigger_after);
+        if(d.automation.cooldown_minutes!=null)setCooldownMinutes(d.automation.cooldown_minutes);
+        if(d.automation.max_regressions_before_pause!=null)setMaxRegressions(d.automation.max_regressions_before_pause);
+        if(d.automation.daemon_schedule)setDaemonSchedule(d.automation.daemon_schedule);
+      }
+      if(d.dashboard){
+        if(d.dashboard.port!=null)setDashPort(d.dashboard.port);
+        if(d.dashboard.open_browser!=null)setOpenBrowser(d.dashboard.open_browser);
+      }
+      setLoading(false);
+    });
+  },[]);
+
+  const doTest=async()=>{
+    setTesting(true);setTestResult(null);
+    const payload={provider,model:model||modelPlaceholders[provider]||''};
+    if(authMode==='api_key'&&apiKey&&!apiKey.startsWith('***'))payload.api_key=apiKey;
+    if(authMode==='oauth_token'&&oauthToken&&!oauthToken.startsWith('***'))payload.oauth_token=oauthToken;
+    if(provider==='ollama'&&baseUrl)payload.base_url=baseUrl;
+    const r=await post('test-connection',payload);
+    setTestResult(r);setTesting(false);
+  };
+
+  const doSave=async()=>{
+    setSaving(true);setSaveMsg(null);
+    const llm={provider,model:model||modelPlaceholders[provider]||''};
+    if(authMode==='api_key'&&apiKey&&!apiKey.startsWith('***'))llm.api_key=apiKey;
+    if(authMode==='oauth_token'&&oauthToken&&!oauthToken.startsWith('***'))llm.oauth_token=oauthToken;
+    if(provider==='ollama'&&baseUrl)llm.base_url=baseUrl;
+
+    const payload={
+      llm,
+      evolution:{budget_per_session:budgetPerSession,feedback_interval:feedbackInterval,outer_interval:outerInterval,plateau_window:plateauWindow},
+      automation:{hook_mode:hookMode,daemon_mode:daemonMode,auto_commit:autoCommit,auto_push:autoPush,trigger_after:triggerAfter,cooldown_minutes:cooldownMinutes,max_regressions_before_pause:maxRegressions,daemon_schedule:daemonSchedule||undefined},
+      dashboard:{port:dashPort,open_browser:openBrowser}
+    };
+    const r=await post('config',payload);
+    setSaveMsg(r.success?{ok:true,text:'Configuration saved.'}:{ok:false,text:r.error||'Save failed.'});
+    setSaving(false);
+  };
+
+  if(loading)return html\`<div class="empty">Loading config...</div>\`;
+
+  return html\`<div class="settings-form">
+    <div class="settings-warning">
+      <strong>Security note:</strong> API keys and tokens are stored in plain text in your local <code>.evo/config.yaml</code> file. Ensure this file is in your <code>.gitignore</code>. For production use, prefer environment variable references (<code>auth_env</code>).
     </div>
-    <div class="panel mt">
-      <h3 class="mb">Settings</h3>
-      <p style="color:var(--text2)">Configuration editing will be available in a future update. Edit <code>.evo/config.yaml</code> directly for now.</p>
-    </div>\`;
+
+    <div class="form-section">
+      <h3>LLM Provider</h3>
+      <div class="form-group">
+        <label>Provider</label>
+        <select value=\${provider} onchange=\${e=>{setProvider(e.target.value);setTestResult(null)}}>
+          <option value="anthropic">Anthropic</option>
+          <option value="openai">OpenAI</option>
+          <option value="ollama">Ollama (local)</option>
+          <option value="claude-code">Claude Code</option>
+        </select>
+      </div>
+      \${provider==='anthropic'||provider==='openai'?html\`
+        <div class="form-group">
+          <label>Authentication</label>
+          <div class="radio-group">
+            <label class="form-row-inline"><input type="radio" name="authMode" value="api_key" checked=\${authMode==='api_key'} onchange=\${()=>setAuthMode('api_key')}/> API Key</label>
+            <label class="form-row-inline"><input type="radio" name="authMode" value="oauth_token" checked=\${authMode==='oauth_token'} onchange=\${()=>setAuthMode('oauth_token')}/> OAuth Token</label>
+          </div>
+        </div>
+        \${authMode==='api_key'?html\`<div class="form-group">
+          <label>API Key</label>
+          <input type="password" value=\${apiKey} oninput=\${e=>setApiKey(e.target.value)} placeholder="sk-..." style="max-width:400px"/>
+        </div>\`:html\`<div class="form-group">
+          <label>OAuth Token</label>
+          <input type="password" value=\${oauthToken} oninput=\${e=>setOauthToken(e.target.value)} placeholder="Token..." style="max-width:400px"/>
+        </div>\`}
+      \`:null}
+      <div class="form-group">
+        <label>Model</label>
+        <input value=\${model} oninput=\${e=>setModel(e.target.value)} placeholder=\${modelPlaceholders[provider]||'model-name'} style="max-width:300px"/>
+      </div>
+      \${provider==='ollama'?html\`<div class="form-group">
+        <label>Base URL</label>
+        <input value=\${baseUrl} oninput=\${e=>setBaseUrl(e.target.value)} placeholder="http://localhost:11434" style="max-width:300px"/>
+      </div>\`:null}
+      <button class="test-btn" onclick=\${doTest} disabled=\${testing}>\${testing?'Testing...':'Test Connection'}</button>
+      \${testResult?html\`<div class=\${'test-result '+(testResult.success?'success':'error')}>
+        \${testResult.success?\`Connected! (\${testResult.latencyMs}ms)\`:testResult.message||'Connection failed'}
+      </div>\`:null}
+    </div>
+
+    <div class="form-section">
+      <h3>Evolution Settings</h3>
+      <div class="form-group">
+        <label>Budget Per Session</label>
+        <input type="number" value=\${budgetPerSession} min=1 oninput=\${e=>setBudgetPerSession(parseInt(e.target.value)||1)} style="max-width:120px"/>
+      </div>
+      <div class="form-group">
+        <label>Feedback Interval</label>
+        <input type="number" value=\${feedbackInterval} min=1 oninput=\${e=>setFeedbackInterval(parseInt(e.target.value)||1)} style="max-width:120px"/>
+      </div>
+      <div class="form-group">
+        <label>Outer Interval</label>
+        <input type="number" value=\${outerInterval} min=1 oninput=\${e=>setOuterInterval(parseInt(e.target.value)||1)} style="max-width:120px"/>
+      </div>
+      <div class="form-group">
+        <label>Plateau Window</label>
+        <input type="number" value=\${plateauWindow} min=1 oninput=\${e=>setPlateauWindow(parseInt(e.target.value)||1)} style="max-width:120px"/>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3>Automation Settings</h3>
+      <div class="toggle-row"><input type="checkbox" checked=\${hookMode} onchange=\${e=>setHookMode(e.target.checked)}/><label>Hook Mode</label></div>
+      <div class="toggle-row"><input type="checkbox" checked=\${daemonMode} onchange=\${e=>setDaemonMode(e.target.checked)}/><label>Daemon Mode</label></div>
+      <div class="toggle-row"><input type="checkbox" checked=\${autoCommit} onchange=\${e=>setAutoCommit(e.target.checked)}/><label>Auto Commit</label></div>
+      <div class="toggle-row"><input type="checkbox" checked=\${autoPush} onchange=\${e=>setAutoPush(e.target.checked)}/><label>Auto Push</label></div>
+      <div class="form-group">
+        <label>Trigger After (commits)</label>
+        <input type="number" value=\${triggerAfter} min=0 oninput=\${e=>setTriggerAfter(parseInt(e.target.value)||0)} style="max-width:120px"/>
+      </div>
+      <div class="form-group">
+        <label>Cooldown Minutes</label>
+        <input type="number" value=\${cooldownMinutes} min=0 oninput=\${e=>setCooldownMinutes(parseInt(e.target.value)||0)} style="max-width:120px"/>
+      </div>
+      <div class="form-group">
+        <label>Max Regressions Before Pause</label>
+        <input type="number" value=\${maxRegressions} min=1 oninput=\${e=>setMaxRegressions(parseInt(e.target.value)||1)} style="max-width:120px"/>
+      </div>
+      <div class="form-group">
+        <label>Daemon Schedule</label>
+        <input value=\${daemonSchedule} oninput=\${e=>setDaemonSchedule(e.target.value)} placeholder="e.g. */30 * * * *" style="max-width:250px"/>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3>Dashboard Settings</h3>
+      <div class="form-group">
+        <label>Port</label>
+        <input type="number" value=\${dashPort} min=1 max=65535 oninput=\${e=>setDashPort(parseInt(e.target.value)||4200)} style="max-width:120px"/>
+      </div>
+      <div class="toggle-row"><input type="checkbox" checked=\${openBrowser} onchange=\${e=>setOpenBrowser(e.target.checked)}/><label>Open Browser on Start</label></div>
+    </div>
+
+    <div class="save-bar">
+      <button onclick=\${doSave} disabled=\${saving}>\${saving?'Saving...':'Save Configuration'}</button>
+      \${saveMsg?html\`<span class="save-msg" style=\${'color:var(--'+(saveMsg.ok?'green':'red')+')'}>
+        \${saveMsg.text}
+      </span>\`:null}
+    </div>
+  </div>\`;
 }
 
 // ── App ──────────────────────────────────────────────────────────────
