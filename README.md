@@ -8,6 +8,8 @@
 
 **Lineage:** ArtifactEvo unifies [PromptEvo](https://github.com/ronslicker0/promptevo) (evolution engine) and [Meta-Harness](https://github.com/ronslicker0/meta-harness) (trace-based orchestration) into a single system. Key improvements over PromptEvo: single-call structured mutations (65-75% cheaper), deterministic anti-pattern detection (zero LLM tokens), hook-triggered + cron automation, and a built-in Preact dashboard.
 
+![ArtifactEvo Dashboard](docs/screenshots/dashboard-example.png)
+
 ## What It Does
 
 ArtifactEvo takes any text artifact -- a prompt, config file, template, or documentation -- scores it against a chain of evaluators (TypeScript compiler, test suites, linters, LLM judges), proposes targeted mutations via a single structured LLM call, keeps improvements, and reverts regressions. It uses bilevel evolution: an inner loop mutates and scores artifacts, while an outer loop evolves the mutation strategy itself based on global statistics. By using single structured LLM calls instead of multi-round conversations, ArtifactEvo achieves 65-75% lower token costs than comparable approaches.
