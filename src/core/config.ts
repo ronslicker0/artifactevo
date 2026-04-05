@@ -62,7 +62,7 @@ const EvoConfigSchema = z.object({
   evolution: EvolutionConfigSchema.default({}),
   automation: AutomationConfigSchema.default({}),
   dashboard: DashboardConfigSchema.default({}),
-  meta_strategy_path: z.string().default('.evo/meta-strategy.md'),
+  meta_strategy_path: z.string().default('.kultiv/meta-strategy.md'),
 });
 
 // ── Exported Types ───────────────────────────────────────────────────────

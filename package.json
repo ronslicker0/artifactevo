@@ -1,25 +1,25 @@
 {
-  "name": "artifactevo",
+  "name": "kultiv",
   "version": "0.1.0",
-  "description": "Automated artifact evolution system — evolve prompts, configs, templates, and code through trace-driven mutation loops",
+  "description": "Cultivate your agents — Kultiv tweaks AI agent instructions, tests what works, and keeps the winners",
   "type": "module",
   "author": "Ron Slicker",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ronslicker0/artifactevo.git"
+    "url": "https://github.com/ronslicker0/kultiv.git"
   },
-  "homepage": "https://github.com/ronslicker0/artifactevo#readme",
+  "homepage": "https://github.com/ronslicker0/kultiv#readme",
   "bugs": {
-    "url": "https://github.com/ronslicker0/artifactevo/issues"
+    "url": "https://github.com/ronslicker0/kultiv/issues"
   },
   "keywords": [
-    "artifact-evolution", "prompt-engineering", "llm", "mutation",
-    "scoring", "automation", "anthropic", "openai", "ollama",
-    "cli", "dashboard", "evolution", "self-improvement"
+    "ai-agents", "prompt-engineering", "prompt-optimization", "genetic-algorithm",
+    "agent-framework", "llm", "cli", "automation", "ai-tools", "prompt-tuning",
+    "anthropic", "openai", "ollama"
   ],
   "bin": {
-    "evo": "./dist/bin/evo.js"
+    "kultiv": "./dist/bin/kultiv.js"
   },
   "files": [
     "dist/",
@@ -30,8 +30,8 @@
   ],
   "scripts": {
     "build": "tsc",
-    "postbuild": "node -e \"const fs=require('fs');const p='dist/bin/evo.js';const c=fs.readFileSync(p,'utf8');if(!c.startsWith('#!'))fs.writeFileSync(p,'#!/usr/bin/env node\\n'+c)\"",
-    "dev": "tsx bin/evo.ts",
+    "postbuild": "node -e \"const fs=require('fs');const p='dist/bin/kultiv.js';const c=fs.readFileSync(p,'utf8');if(!c.startsWith('#!'))fs.writeFileSync(p,'#!/usr/bin/env node\\n'+c)\"",
+    "dev": "tsx bin/kultiv.ts",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "lint": "eslint src/ bin/ --ext .ts",

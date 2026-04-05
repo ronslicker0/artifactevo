@@ -1,0 +1,30 @@
+version: "1.0"
+artifacts:
+  test-prompt:
+    path: ./tests/e2e/fixtures/test-prompt.md
+    type: prompt
+    scorer:
+      chain:
+        - name: echo-test
+          command: echo "score: 80/100"
+          weight: 100
+llm:
+  provider: anthropic
+  model: claude-sonnet-4-20250514
+  auth_env: ANTHROPIC_API_KEY
+evolution:
+  budget_per_session: 5
+  feedback_interval: 3
+  outer_interval: 10
+  plateau_window: 5
+automation:
+  hook_mode: false
+  daemon_mode: false
+  cooldown_minutes: 10
+  auto_commit: true
+  auto_push: false
+  max_regressions_before_pause: 3
+dashboard:
+  port: 4201
+  open_browser: false
+meta_strategy_path: .kultiv/meta-strategy.md

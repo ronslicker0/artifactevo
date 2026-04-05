@@ -1,6 +1,6 @@
-// ── ArtifactEvo Dashboard Server ────────────────────────────────────────
+// ── Kultiv Dashboard Server ────────────────────────────────────────
 // Hono HTTP server serving the SPA and JSON API routes.
-// Reads directly from .evo/ files — no database.
+// Reads directly from .kultiv/ files — no database.
 
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
@@ -335,7 +335,7 @@ export async function startDashboard(
     const projectRoot = resolve(absEvoDir, '..');
 
     // Write content to a temp file for pattern/script scorers
-    const tempFile = join(tmpdir(), `evo-playground-${randomUUID()}.txt`);
+    const tempFile = join(tmpdir(), `kultiv-playground-${randomUUID()}.txt`);
     writeFileSync(tempFile, body.content, 'utf-8');
 
     try {
@@ -426,11 +426,11 @@ export async function startDashboard(
     if (existsSync(signalPath)) {
       unlinkSync(signalPath);
     }
-    return c.json({ success: true, message: 'Resume signal sent. Run `evo resume` to continue.' });
+    return c.json({ success: true, message: 'Resume signal sent. Run `kultiv resume` to continue.' });
   });
 
   // ── Start Server ────────────────────────────────────────────────────
-  console.log(`\x1b[32mArtifactEvo Dashboard\x1b[0m → http://localhost:${port}`);
+  console.log(`\x1b[32mKultiv Dashboard\x1b[0m → http://localhost:${port}`);
 
   if (openBrowser) {
     const { exec } = await import('node:child_process');

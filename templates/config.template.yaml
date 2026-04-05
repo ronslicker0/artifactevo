@@ -1,6 +1,6 @@
 version: "1.0"
 
-# Artifacts to evolve — add entries with `evo add <name> <path>`
+# Artifacts to evolve — add entries with `kultiv add <name> <path>`
 artifacts: {}
 
 # LLM configuration (required for mutations and optional LLM-judge scoring)
@@ -33,4 +33,4 @@ dashboard:
   open_browser: true
 
 # Meta-strategy file (self-improving mutation strategy)
-meta_strategy_path: .evo/meta-strategy.md
+meta_strategy_path: .kultiv/meta-strategy.md

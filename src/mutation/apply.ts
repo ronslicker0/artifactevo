@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync, unlinkSync, existsSync } from 'node:fs';
 
 // ── Backup Extension ────────────────────────────────────────────────────
 
-const BACKUP_SUFFIX = '.evo-backup';
+const BACKUP_SUFFIX = '.kultiv-backup';
 
 // ── Apply Mutation ──────────────────────────────────────────────────────
 

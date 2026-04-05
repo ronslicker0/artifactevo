@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('ArtifactEvo Dashboard', () => {
+test.describe('Kultiv Dashboard', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate and wait for Preact SPA to hydrate (loads from CDN)
     await page.goto('/', { waitUntil: 'networkidle' });
@@ -9,7 +9,7 @@ test.describe('ArtifactEvo Dashboard', () => {
   });
 
   test('loads and shows overview tab', async ({ page }) => {
-    await expect(page.locator('header h1')).toContainText('ArtifactEvo');
+    await expect(page.locator('header h1')).toContainText('Kultiv');
     // Overview tab should be active by default
     await expect(page.locator('nav button.active')).toContainText('Overview');
     // Should show stat cards

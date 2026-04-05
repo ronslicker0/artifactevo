@@ -8,7 +8,7 @@ export function getDashboardHTML(): string {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ArtifactEvo Dashboard</title>
+<title>Kultiv Dashboard</title>
 <script type="importmap">
 {"imports":{"preact":"https://unpkg.com/preact@10.25.4/dist/preact.module.js","preact/hooks":"https://unpkg.com/preact@10.25.4/hooks/dist/hooks.module.js","htm":"https://unpkg.com/htm@3.1.1/dist/htm.module.js"}}
 </script>
@@ -510,7 +510,7 @@ function Settings(){
 
   return html\`<div class="settings-form">
     <div class="settings-warning">
-      <strong>Security note:</strong> API keys and tokens are stored in plain text in your local <code>.evo/config.yaml</code> file. Ensure this file is in your <code>.gitignore</code>. For production use, prefer environment variable references (<code>auth_env</code>).
+      <strong>Security note:</strong> API keys and tokens are stored in plain text in your local <code>.kultiv/config.yaml</code> file. Ensure this file is in your <code>.gitignore</code>. For production use, prefer environment variable references (<code>auth_env</code>).
     </div>
 
     <div class="form-section">
@@ -745,7 +745,7 @@ function App(){
 
   return html\`
     <header><div class="container inner">
-      <h1>ArtifactEvo</h1>
+      <h1>Kultiv</h1>
       <nav>\${tabs.map(([k,label])=>html\`<button class=\${tab===k?'active':''} onclick=\${()=>setTab(k)}>\${label}</button>\`)}</nav>
     </div></header>
     <main class="container" style="padding-top:16px;padding-bottom:40px">

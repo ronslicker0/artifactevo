@@ -9,7 +9,7 @@ export default defineConfig({
     headless: true,
   },
   webServer: {
-    command: 'npx tsx bin/evo.ts dashboard --port 4201 --evo-dir ./tests/e2e/fixtures/.evo',
+    command: 'npx tsx bin/kultiv.ts dashboard --port 4201 --kultiv-dir ./tests/e2e/fixtures/.kultiv',
     port: 4201,
     reuseExistingServer: !process.env.CI,
     timeout: 30000,

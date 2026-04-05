@@ -98,7 +98,7 @@ export async function startDaemon(config: EvoConfig, evoDir: string): Promise<vo
   // Write PID file
   writePid(evoDir);
 
-  console.log(bold('ArtifactEvo Daemon'));
+  console.log(bold('Kultiv Daemon'));
   console.log(dim(`  PID: ${process.pid}`));
   console.log(dim(`  Interval: ${intervalMs / 1000}s`));
   console.log(dim(`  Batch size: ${batchSize}`));

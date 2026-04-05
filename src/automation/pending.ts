@@ -33,7 +33,7 @@ function ensurePendingDir(evoDir: string): void {
 
 /**
  * Add a pending evolution run to the queue.
- * Writes a JSON file to `.evo/pending/<run-id>.json`.
+ * Writes a JSON file to `.kultiv/pending/<run-id>.json`.
  */
 export function addPending(evoDir: string, runId: string, artifactId: string): void {
   ensurePendingDir(evoDir);

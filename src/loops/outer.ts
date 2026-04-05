@@ -146,7 +146,7 @@ export async function outerLoop(
   const prompt = buildOuterPrompt(currentStrategy, stats, antiPatterns);
 
   const systemPreamble =
-    'You are the meta-strategy optimizer for an artifact evolution system. ' +
+    'You are the meta-strategy optimizer for Kultiv, an agent improvement system. ' +
     'Your job is to revise the mutation strategy based on observed performance data. ' +
     'Respond with ONLY the updated meta-strategy markdown content. No wrapping code blocks.';
 

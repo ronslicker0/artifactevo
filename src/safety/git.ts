@@ -18,7 +18,7 @@ function git(args: string, cwd: string): string {
 }
 
 function branchName(genid: number): string {
-  return `evo/exp-${genid}`;
+  return `kultiv/exp-${genid}`;
 }
 
 // ── Public API ───────────────────────────────────────────────────────────
@@ -76,7 +76,7 @@ export function getBaseBranch(projectRoot: string): string {
 }
 
 /**
- * Create a new experiment branch: `evo/exp-<genid>`.
+ * Create a new experiment branch: `kultiv/exp-<genid>`.
  * Returns the branch name.
  */
 export function createExperimentBranch(ctx: GitSafetyContext): string {
@@ -118,7 +118,7 @@ export function mergeExperiment(ctx: GitSafetyContext): void {
 
   try {
     git(`checkout ${baseBranch}`, ctx.projectRoot);
-    git(`merge ${branch} --no-ff -m "evo: merge experiment ${ctx.genid}"`, ctx.projectRoot);
+    git(`merge ${branch} --no-ff -m "kultiv: merge experiment ${ctx.genid}"`, ctx.projectRoot);
     git(`branch -d ${branch}`, ctx.projectRoot);
   } catch (err) {
     throw new Error(

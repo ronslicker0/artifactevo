@@ -16,7 +16,7 @@ const dim = (s: string): string => `\x1b[2m${s}\x1b[0m`;
 // ── Init Wizard ────────────────────────────────────────────────────────
 
 export async function runInitWizard(evoDir: string): Promise<void> {
-  console.log('\n' + bold('ArtifactEvo Setup Wizard') + '\n');
+  console.log('\n' + bold('Kultiv Setup Wizard') + '\n');
   console.log(dim('Configure your evolution environment step by step.\n'));
 
   // Step 1: Choose LLM provider
@@ -62,7 +62,7 @@ export async function runInitWizard(evoDir: string): Promise<void> {
     });
 
     if (!credential) {
-      console.log(yellow('No credential provided. You can add it later in .evo/config.yaml'));
+      console.log(yellow('No credential provided. You can add it later in .kultiv/config.yaml'));
     }
   } else if (provider === 'ollama') {
     baseUrl = await input({
@@ -115,7 +115,7 @@ export async function runInitWizard(evoDir: string): Promise<void> {
     })),
   });
 
-  // Step 6: Create .evo/ directory structure
+  // Step 6: Create .kultiv/ directory structure
   mkdirSync(join(evoDir, 'pending'), { recursive: true });
   mkdirSync(join(evoDir, 'traces', 'runs'), { recursive: true });
 
@@ -148,12 +148,12 @@ export async function runInitWizard(evoDir: string): Promise<void> {
       port: 4200,
       open_browser: true,
     },
-    meta_strategy_path: '.evo/meta-strategy.md',
+    meta_strategy_path: '.kultiv/meta-strategy.md',
   };
 
   const configPath = join(evoDir, 'config.yaml');
   writeFileSync(configPath, yaml.dump(config, { lineWidth: 120 }), 'utf-8');
-  console.log(green('  Created .evo/config.yaml'));
+  console.log(green('  Created .kultiv/config.yaml'));
 
   // Copy meta-strategy template
   const strategyDest = join(evoDir, 'meta-strategy.md');
@@ -163,27 +163,27 @@ export async function runInitWizard(evoDir: string): Promise<void> {
       '# Mutation Strategy\n\n## Priority Order\n1. ADD_RULE\n2. ADD_EXAMPLE\n3. SIMPLIFY\n',
       'utf-8',
     );
-    console.log(green('  Created .evo/meta-strategy.md'));
+    console.log(green('  Created .kultiv/meta-strategy.md'));
   }
 
   // Create empty archive
   const archivePath = join(evoDir, 'archive.jsonl');
   if (!existsSync(archivePath)) {
     writeFileSync(archivePath, '', 'utf-8');
-    console.log(green('  Created .evo/archive.jsonl'));
+    console.log(green('  Created .kultiv/archive.jsonl'));
   }
 
   // Step 8: Print next steps
-  console.log('\n' + green(bold('ArtifactEvo initialized!')) + '\n');
+  console.log('\n' + green(bold('Kultiv initialized!')) + '\n');
   console.log('Next steps:');
-  console.log(dim('  1. evo add <name> <path>     Register an artifact to evolve'));
-  console.log(dim('  2. evo baseline              Score your artifact'));
-  console.log(dim('  3. evo evolve -n 10          Run 10 evolution experiments'));
-  console.log(dim('  4. evo dashboard             Open the web dashboard'));
+  console.log(dim('  1. kultiv add <name> <path>     Register an artifact to evolve'));
+  console.log(dim('  2. kultiv baseline              Score your artifact'));
+  console.log(dim('  3. kultiv evolve -n 10          Run 10 evolution experiments'));
+  console.log(dim('  4. kultiv dashboard             Open the web dashboard'));
   console.log('');
 
   if (credential) {
-    console.log(yellow('  Note: Your credential is stored in .evo/config.yaml.'));
-    console.log(yellow('  Make sure .evo/ is in your .gitignore!'));
+    console.log(yellow('  Note: Your credential is stored in .kultiv/config.yaml.'));
+    console.log(yellow('  Make sure .kultiv/ is in your .gitignore!'));
   }
 }

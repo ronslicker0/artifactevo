@@ -50,53 +50,53 @@ export interface SessionState {
 const SESSION_STATE_FILE = 'session-state.json';
 const PAUSE_SIGNAL_FILE = 'pause-signal';
 
-function sessionStatePath(evoDir: string): string {
-  return join(evoDir, SESSION_STATE_FILE);
+function sessionStatePath(kultivDir: string): string {
+  return join(kultivDir, SESSION_STATE_FILE);
 }
 
-function pauseSignalPath(evoDir: string): string {
-  return join(evoDir, PAUSE_SIGNAL_FILE);
+function pauseSignalPath(kultivDir: string): string {
+  return join(kultivDir, PAUSE_SIGNAL_FILE);
 }
 
 function generateSessionId(): string {
-  return `evo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return `kultiv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function hasPauseSignal(evoDir: string): boolean {
-  return existsSync(pauseSignalPath(evoDir));
+function hasPauseSignal(kultivDir: string): boolean {
+  return existsSync(pauseSignalPath(kultivDir));
 }
 
-function consumePauseSignal(evoDir: string): void {
-  const path = pauseSignalPath(evoDir);
+function consumePauseSignal(kultivDir: string): void {
+  const path = pauseSignalPath(kultivDir);
   if (existsSync(path)) {
     unlinkSync(path);
   }
 }
 
-function saveSessionState(evoDir: string, state: SessionState): void {
-  if (!existsSync(evoDir)) {
-    mkdirSync(evoDir, { recursive: true });
+function saveSessionState(kultivDir: string, state: SessionState): void {
+  if (!existsSync(kultivDir)) {
+    mkdirSync(kultivDir, { recursive: true });
   }
-  writeFileSync(sessionStatePath(evoDir), JSON.stringify(state, null, 2), 'utf-8');
+  writeFileSync(sessionStatePath(kultivDir), JSON.stringify(state, null, 2), 'utf-8');
 }
 
 /**
  * Create a pause signal file. The evolve loop checks for this at the start
  * of each iteration and gracefully pauses.
  */
-export function pauseEvolution(evoDir: string): boolean {
-  if (!existsSync(evoDir)) {
+export function pauseEvolution(kultivDir: string): boolean {
+  if (!existsSync(kultivDir)) {
     return false;
   }
-  writeFileSync(pauseSignalPath(evoDir), new Date().toISOString(), 'utf-8');
+  writeFileSync(pauseSignalPath(kultivDir), new Date().toISOString(), 'utf-8');
   return true;
 }
 
 /**
  * Read the current session state, or null if no session exists.
  */
-export function getSessionState(evoDir: string): SessionState | null {
-  const path = sessionStatePath(evoDir);
+export function getSessionState(kultivDir: string): SessionState | null {
+  const path = sessionStatePath(kultivDir);
   if (!existsSync(path)) return null;
 
   try {
@@ -110,10 +110,10 @@ export function getSessionState(evoDir: string): SessionState | null {
 /**
  * Clear the session state file and any pause signal.
  */
-export function clearSession(evoDir: string): void {
-  const statePath = sessionStatePath(evoDir);
+export function clearSession(kultivDir: string): void {
+  const statePath = sessionStatePath(kultivDir);
   if (existsSync(statePath)) unlinkSync(statePath);
-  consumePauseSignal(evoDir);
+  consumePauseSignal(kultivDir);
 }
 
 // ── Evolve Orchestrator ─────────────────────────────────────────────────
@@ -136,13 +136,13 @@ export async function evolve(
   config: EvoConfig,
   options?: EvolveOptions,
 ): Promise<EvolveResult> {
-  const evoDir = resolve('.evo');
+  const kultivDir = resolve('.kultiv');
   const feedbackInterval = config.evolution.feedback_interval;
   const outerInterval = config.evolution.outer_interval;
   const plateauWindow = config.evolution.plateau_window;
 
   // 1. Setup
-  const archivePath = resolve('.evo', 'archive.jsonl');
+  const archivePath = resolve('.kultiv', 'archive.jsonl');
   const archive = new Archive(archivePath);
   archive.load();
 
@@ -152,7 +152,7 @@ export async function evolve(
   const allArtifactIds = Object.keys(config.artifacts);
 
   // Check for a paused session to resume
-  const existingSession = getSessionState(evoDir);
+  const existingSession = getSessionState(kultivDir);
   let startIndex = 0;
   let budget: number;
   let artifactIds: string[];
@@ -168,7 +168,7 @@ export async function evolve(
     artifactIds = existingSession.artifact_queue;
     sessionId = existingSession.session_id;
 
-    console.log(bold('\nArtifactEvo \u2014 Resuming paused session'));
+    console.log(bold('\nKultiv \u2014 Resuming paused session'));
     console.log(dim(`  Session: ${sessionId}`));
     console.log(dim(`  Resuming from experiment ${startIndex + 1}/${budget}`));
     console.log(dim(`  Artifacts: ${artifactIds.join(', ')}`));
@@ -182,7 +182,7 @@ export async function evolve(
     sessionId = generateSessionId();
 
     if (artifactIds.length === 0) {
-      throw new Error('No artifacts configured. Use `evo add <name> <path>` to register artifacts.');
+      throw new Error('No artifacts configured. Use `kultiv add <name> <path>` to register artifacts.');
     }
 
     if (options?.artifactId && !config.artifacts[options.artifactId]) {
@@ -192,9 +192,9 @@ export async function evolve(
     }
 
     // Clear any stale session data
-    clearSession(evoDir);
+    clearSession(kultivDir);
 
-    console.log(bold('\nArtifactEvo \u2014 Starting evolution session'));
+    console.log(bold('\nKultiv \u2014 Starting evolution session'));
     console.log(dim(`  Session: ${sessionId}`));
     console.log(dim(`  Budget: ${budget} experiments`));
     console.log(dim(`  Artifacts: ${artifactIds.join(', ')}`));
@@ -204,7 +204,7 @@ export async function evolve(
 
   // Save initial session state
   const effectiveOptions = options ?? {};
-  saveSessionState(evoDir, {
+  saveSessionState(kultivDir, {
     session_id: sessionId,
     started_at: existingSession?.started_at ?? new Date().toISOString(),
     paused_at: null,
@@ -221,11 +221,11 @@ export async function evolve(
 
   for (let i = startIndex; i < budget; i++) {
     // Check for pause signal before each iteration
-    if (hasPauseSignal(evoDir)) {
-      consumePauseSignal(evoDir);
+    if (hasPauseSignal(kultivDir)) {
+      consumePauseSignal(kultivDir);
       console.log(yellow(bold('\n  PAUSED: Pause signal received. Saving session state.')));
 
-      saveSessionState(evoDir, {
+      saveSessionState(kultivDir, {
         session_id: sessionId,
         started_at: existingSession?.started_at ?? new Date().toISOString(),
         paused_at: new Date().toISOString(),
@@ -242,7 +242,7 @@ export async function evolve(
 
       const summary = buildSummary(experiments, outerLoopRan, totalTokenCost);
       console.log(summary);
-      console.log(dim('  Resume with: evo resume'));
+      console.log(dim('  Resume with: kultiv resume'));
 
       return {
         experiments,
@@ -273,7 +273,7 @@ export async function evolve(
     }
 
     // Persist session state after each experiment (crash-safe)
-    saveSessionState(evoDir, {
+    saveSessionState(kultivDir, {
       session_id: sessionId,
       started_at: existingSession?.started_at ?? new Date().toISOString(),
       paused_at: null,
@@ -343,7 +343,7 @@ export async function evolve(
   }
 
   // 4. Mark session as completed
-  saveSessionState(evoDir, {
+  saveSessionState(kultivDir, {
     session_id: sessionId,
     started_at: existingSession?.started_at ?? new Date().toISOString(),
     paused_at: null,

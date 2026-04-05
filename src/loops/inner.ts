@@ -204,7 +204,7 @@ export async function innerLoop(
     // Git safety: commit successful mutation and merge back
     if (gitCtx) {
       try {
-        commitExperiment(gitCtx, `evo: gen ${genid} ${mutationType} score ${newScore}/${maxScore}`);
+        commitExperiment(gitCtx, `kultiv: gen ${genid} ${mutationType} score ${newScore}/${maxScore}`);
         mergeExperiment(gitCtx);
       } catch {
         // Merge failed — leave branch for manual resolution

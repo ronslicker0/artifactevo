@@ -26,16 +26,16 @@ const dim = (s: string): string => `\x1b[2m${s}\x1b[0m`;
 
 // ── Config Path ─────────────────────────────────────────────────────────
 
-const DEFAULT_CONFIG_PATH = '.evo/config.yaml';
-const DEFAULT_EVO_DIR = '.evo';
-const DEFAULT_ARCHIVE_PATH = '.evo/archive.jsonl';
+const DEFAULT_CONFIG_PATH = '.kultiv/config.yaml';
+const DEFAULT_KULTIV_DIR = '.kultiv';
+const DEFAULT_ARCHIVE_PATH = '.kultiv/archive.jsonl';
 
 function resolveConfigPath(opts: { config?: string }): string {
   return resolve(opts.config ?? DEFAULT_CONFIG_PATH);
 }
 
-function resolveEvoDir(): string {
-  return resolve(DEFAULT_EVO_DIR);
+function resolveKultivDir(): string {
+  return resolve(DEFAULT_KULTIV_DIR);
 }
 
 // ── Program ─────────────────────────────────────────────────────────────
@@ -43,8 +43,8 @@ function resolveEvoDir(): string {
 const program = new Command();
 
 program
-  .name('evo')
-  .description('ArtifactEvo — evolve prompts, configs, templates through trace-driven mutation loops')
+  .name('kultiv')
+  .description('Kultiv — cultivate your agents by tweaking instructions, testing what works, and keeping the winners')
   .version('0.1.0')
   .option('-c, --config <path>', 'path to config.yaml', DEFAULT_CONFIG_PATH);
 
@@ -52,43 +52,43 @@ program
 
 program
   .command('init')
-  .description('Initialize .evo/ directory with config.yaml from template')
+  .description('Initialize .kultiv/ directory with config.yaml from template')
   .option('--preset <type>', 'preset type (default: standard)', 'standard')
   .option('--no-interactive', 'skip interactive wizard')
   .action(async (opts) => {
-    const evoDir = resolveEvoDir();
+    const kultivDir = resolveKultivDir();
 
-    if (existsSync(evoDir)) {
-      console.log(yellow('Warning: .evo/ directory already exists'));
+    if (existsSync(kultivDir)) {
+      console.log(yellow('Warning: .kultiv/ directory already exists'));
     }
 
     // Interactive wizard when running in a TTY and not explicitly disabled
     if (process.stdin.isTTY && opts.interactive !== false) {
-      await runInitWizard(evoDir);
+      await runInitWizard(kultivDir);
       return;
     }
 
     // Non-interactive fallback
     // Create directory structure
-    mkdirSync(join(evoDir, 'pending'), { recursive: true });
-    mkdirSync(join(evoDir, 'traces', 'runs'), { recursive: true });
+    mkdirSync(join(kultivDir, 'pending'), { recursive: true });
+    mkdirSync(join(kultivDir, 'traces', 'runs'), { recursive: true });
 
     // Copy config template
-    const configDest = join(evoDir, 'config.yaml');
+    const configDest = join(kultivDir, 'config.yaml');
     if (!existsSync(configDest)) {
       const templatePath = resolve(dirname(new URL(import.meta.url).pathname), '..', 'templates', 'config.template.yaml');
       if (existsSync(templatePath)) {
         copyFileSync(templatePath, configDest);
       } else {
         // Inline fallback template
-        const template = `version: "1.0"\nartifacts: {}\nllm:\n  provider: anthropic\n  model: claude-sonnet-4-20250514\n  auth_env: ANTHROPIC_API_KEY\nevolution:\n  budget_per_session: 10\n  feedback_interval: 3\n  outer_interval: 10\n  plateau_window: 5\nautomation:\n  hook_mode: false\n  daemon_mode: false\n  cooldown_minutes: 10\n  auto_commit: true\n  auto_push: false\n  max_regressions_before_pause: 3\nmeta_strategy_path: .evo/meta-strategy.md\n`;
+        const template = `version: "1.0"\nartifacts: {}\nllm:\n  provider: anthropic\n  model: claude-sonnet-4-20250514\n  auth_env: ANTHROPIC_API_KEY\nevolution:\n  budget_per_session: 10\n  feedback_interval: 3\n  outer_interval: 10\n  plateau_window: 5\nautomation:\n  hook_mode: false\n  daemon_mode: false\n  cooldown_minutes: 10\n  auto_commit: true\n  auto_push: false\n  max_regressions_before_pause: 3\nmeta_strategy_path: .kultiv/meta-strategy.md\n`;
         writeFileSync(configDest, template, 'utf-8');
       }
-      console.log(green('Created .evo/config.yaml'));
+      console.log(green('Created .kultiv/config.yaml'));
     }
 
     // Copy meta-strategy template
-    const strategyDest = join(evoDir, 'meta-strategy.md');
+    const strategyDest = join(kultivDir, 'meta-strategy.md');
     if (!existsSync(strategyDest)) {
       const templatePath = resolve(dirname(new URL(import.meta.url).pathname), '..', 'templates', 'meta-strategy.template.md');
       if (existsSync(templatePath)) {
@@ -96,20 +96,20 @@ program
       } else {
         writeFileSync(strategyDest, '# Mutation Strategy\n\n## Priority Order\n1. ADD_RULE\n2. ADD_EXAMPLE\n3. SIMPLIFY\n', 'utf-8');
       }
-      console.log(green('Created .evo/meta-strategy.md'));
+      console.log(green('Created .kultiv/meta-strategy.md'));
     }
 
     // Create empty archive
-    const archivePath = join(evoDir, 'archive.jsonl');
+    const archivePath = join(kultivDir, 'archive.jsonl');
     if (!existsSync(archivePath)) {
       writeFileSync(archivePath, '', 'utf-8');
-      console.log(green('Created .evo/archive.jsonl'));
+      console.log(green('Created .kultiv/archive.jsonl'));
     }
 
-    console.log(green('\nArtifactEvo initialized. Next steps:'));
-    console.log(dim('  1. evo add <name> <path>    — register an artifact'));
-    console.log(dim('  2. evo baseline              — score artifacts'));
-    console.log(dim('  3. evo evolve                — start evolving'));
+    console.log(green('\nKultiv initialized. Next steps:'));
+    console.log(dim('  1. kultiv add <name> <path>    — register an artifact'));
+    console.log(dim('  2. kultiv baseline              — score artifacts'));
+    console.log(dim('  3. kultiv evolve                — start evolving'));
   });
 
 // ── add ─────────────────────────────────────────────────────────────────
@@ -148,7 +148,7 @@ program
     writeFileSync(configPath, yaml.dump(parsed, { lineWidth: 120 }), 'utf-8');
 
     console.log(green(`Added artifact "${name}" -> ${artifactPath}`));
-    console.log(dim('  Edit .evo/config.yaml to configure the scorer chain.'));
+    console.log(dim('  Edit .kultiv/config.yaml to configure the scorer chain.'));
   });
 
 // ── baseline ────────────────────────────────────────────────────────────
@@ -316,7 +316,7 @@ program
       : Object.keys(config.artifacts);
 
     // Header
-    console.log(bold('\nArtifactEvo Status'));
+    console.log(bold('\nKultiv Status'));
     console.log('\u2550'.repeat(55));
 
     // Summary stats
@@ -422,19 +422,19 @@ program
     const { execSync } = await import('node:child_process');
     const { initRun, finalizeRun } = await import('../src/core/trace-store.js');
 
-    const evoDir = resolveEvoDir();
+    const kultivDir = resolveKultivDir();
     const artifactId = opts.artifact;
     const command = commandParts.join(' ');
 
     console.log(dim(`Tracing: ${command}`));
-    const { runId } = initRun(evoDir, artifactId, 'cli');
+    const { runId } = initRun(kultivDir, artifactId, 'cli');
 
     try {
       execSync(command, { stdio: 'inherit' });
-      finalizeRun(evoDir, runId, 0, 0, { traced: true });
+      finalizeRun(kultivDir, runId, 0, 0, { traced: true });
       console.log(green(`Trace ${runId} completed.`));
     } catch (err) {
-      finalizeRun(evoDir, runId, 0, 0, { traced: true, error: String(err) });
+      finalizeRun(kultivDir, runId, 0, 0, { traced: true, error: String(err) });
       console.log(red(`Trace ${runId} failed: ${String(err)}`));
     }
   });
@@ -449,24 +449,24 @@ daemonCmd
   .action(async (_opts, cmd) => {
     const configPath = resolveConfigPath(cmd.optsWithGlobals());
     const config = loadConfig(configPath);
-    const evoDir = resolveEvoDir();
+    const kultivDir = resolveKultivDir();
 
-    const existingPid = readDaemonPid(evoDir);
+    const existingPid = readDaemonPid(kultivDir);
     if (existingPid !== null) {
       console.log(yellow(`Daemon may already be running (PID: ${existingPid})`));
-      console.log(dim('Use `evo daemon stop` to stop it first.'));
+      console.log(dim('Use `kultiv daemon stop` to stop it first.'));
       return;
     }
 
-    await startDaemon(config, evoDir);
+    await startDaemon(config, kultivDir);
   });
 
 daemonCmd
   .command('stop')
   .description('Stop the automation daemon')
   .action(() => {
-    const evoDir = resolveEvoDir();
-    const pid = readDaemonPid(evoDir);
+    const kultivDir = resolveKultivDir();
+    const pid = readDaemonPid(kultivDir);
 
     if (pid === null) {
       console.log(dim('No daemon running.'));
@@ -479,7 +479,7 @@ daemonCmd
     } catch {
       console.log(yellow(`Could not signal PID ${pid} — cleaning up stale PID file.`));
       const { unlinkSync: rmSync } = require('node:fs');
-      const pidFile = join(evoDir, 'daemon.pid');
+      const pidFile = join(kultivDir, 'daemon.pid');
       if (existsSync(pidFile)) rmSync(pidFile);
     }
   });
@@ -559,11 +559,11 @@ program
   .command('pause')
   .description('Pause the current evolution session')
   .action(() => {
-    const evoDir = resolve('.evo');
-    const signalPath = join(evoDir, 'pause-signal');
+    const kultivDir = resolve('.kultiv');
+    const signalPath = join(kultivDir, 'pause-signal');
     writeFileSync(signalPath, new Date().toISOString(), 'utf-8');
     console.log(yellow('Pause signal sent. Current experiment will finish, then session pauses.'));
-    console.log(dim('Run `evo resume` to continue.'));
+    console.log(dim('Run `kultiv resume` to continue.'));
   });
 
 // ── Resume Command ─────────────────────────────────────────────────────
@@ -573,9 +573,9 @@ program
   .description('Resume a paused evolution session')
   .option('-n, --budget <n>', 'Remaining budget (default: resume with original)')
   .action(async (opts) => {
-    const evoDir = resolve('.evo');
-    const sessionPath = join(evoDir, 'session-state.json');
-    const signalPath = join(evoDir, 'pause-signal');
+    const kultivDir = resolve('.kultiv');
+    const sessionPath = join(kultivDir, 'session-state.json');
+    const signalPath = join(kultivDir, 'pause-signal');
 
     // Clear pause signal
     if (existsSync(signalPath)) {
@@ -626,13 +626,13 @@ program
 
 program
   .command('dashboard')
-  .description('Open the ArtifactEvo web dashboard')
+  .description('Open the Kultiv web dashboard')
   .option('-p, --port <port>', 'Port number', '4200')
-  .option('--evo-dir <path>', 'Path to .evo directory', '.evo')
+  .option('--kultiv-dir <path>', 'Path to .kultiv directory', '.kultiv')
   .action(async (opts) => {
     const { startDashboard } = await import('../src/dashboard/server.js');
-    const evoDir = resolve(opts.evoDir ?? '.evo');
-    const configPath = join(evoDir, 'config.yaml');
+    const kultivDir = resolve(opts.kultivDir ?? '.kultiv');
+    const configPath = join(kultivDir, 'config.yaml');
     let config: EvoConfig;
     try {
       config = loadConfig(configPath);
@@ -645,12 +645,12 @@ program
         evolution: { budget_per_session: 10, feedback_interval: 3, outer_interval: 10, plateau_window: 5 },
         automation: { hook_mode: false, daemon_mode: false, trigger_after: 1, cooldown_minutes: 10, auto_commit: true, auto_push: false, max_regressions_before_pause: 3 },
         dashboard: { port: 4200, open_browser: true },
-        meta_strategy_path: '.evo/meta-strategy.md',
+        meta_strategy_path: '.kultiv/meta-strategy.md',
       };
     }
     const port = parseInt(opts.port, 10);
-    const openBrowser = opts.evoDir ? false : config.dashboard.open_browser;
-    await startDashboard(port, evoDir, openBrowser);
+    const openBrowser = opts.kultivDir ? false : config.dashboard.open_browser;
+    await startDashboard(port, kultivDir, openBrowser);
   });
 
 // ── Parse ───────────────────────────────────────────────────────────────

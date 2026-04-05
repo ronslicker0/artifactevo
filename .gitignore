@@ -1,4 +1,5 @@
 node_modules/
 dist/
-.evo/
+.kultiv/
+!tests/e2e/fixtures/.kultiv/
 *.tsbuildinfo

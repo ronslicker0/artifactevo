@@ -29,7 +29,7 @@ export async function proposeMutation(
   const prompt = buildMutationPrompt(context);
 
   const systemPreamble =
-    'You are an artifact evolution engine. Analyze the artifact, scorecard, and history, ' +
+    'You are a Kultiv evolution engine. Analyze the artifact, scorecard, and history, ' +
     'then propose exactly ONE mutation following the meta-strategy. ' +
     'Respond with valid JSON matching the MutationOutput schema. ' +
     'Include the FULL updated artifact content in the "updated_artifact" field.';
