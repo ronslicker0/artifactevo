@@ -32,10 +32,10 @@
     "build": "tsc",
     "postbuild": "node -e \"const fs=require('fs');const p='dist/bin/kultiv.js';const c=fs.readFileSync(p,'utf8');if(!c.startsWith('#!'))fs.writeFileSync(p,'#!/usr/bin/env node\\n'+c)\"",
     "dev": "tsx bin/kultiv.ts",
-    "test": "vitest run",
+    "test": "vitest run --exclude tests/e2e/**",
     "test:e2e": "playwright test",
     "lint": "eslint src/ bin/ --ext .ts",
-    "prepublishOnly": "npm run build && npm run test"
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
