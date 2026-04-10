@@ -62,9 +62,9 @@ export async function runLLMJudge(
 ${rubric}
 
 ## Artifact Content
-\`\`\`
+<artifact>
 ${artifactContent}
-\`\`\`
+</artifact>
 
 ## Response Format
 For each criterion, state which tier matched and why, then assign that tier's point value.

@@ -78,9 +78,9 @@ ${context.metaStrategy}
 ## Artifact Type: ${context.artifactType}
 
 ## Current Artifact
-\`\`\`
+<artifact>
 ${context.artifact}
-\`\`\`
+</artifact>
 
 ## Current Scorecard (${context.scorecard.percentage}%)
 ${scorecardBlock}

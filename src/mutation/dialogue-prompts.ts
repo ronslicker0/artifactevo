@@ -44,9 +44,9 @@ ${context.metaStrategy}
 ## Artifact Type: ${context.artifactType}
 
 ## Current Artifact
-\`\`\`
+<artifact>
 ${context.artifact}
-\`\`\`
+</artifact>
 
 ## Current Scorecard (${context.scorecard.percentage.toFixed(1)}%)
 ${scorecardBlock}
@@ -145,9 +145,9 @@ You selected this candidate:
 Now write a precise specification for this mutation. Be exact about what to change so the Generate phase can execute it precisely.
 
 Current artifact for reference:
-\`\`\`
+<artifact>
 ${artifact}
-\`\`\`
+</artifact>
 
 Respond with a JSON code block:
 
@@ -182,9 +182,9 @@ Apply the following specification to produce the updated artifact.
 - **Constraints:** ${spec.integration_constraints.length > 0 ? spec.integration_constraints.join('; ') : 'none'}
 
 **Current artifact:**
-\`\`\`
+<artifact>
 ${artifact}
-\`\`\`
+</artifact>
 
 **Rules:**
 - Apply EXACTLY ONE change matching the specification above.
