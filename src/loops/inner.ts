@@ -127,12 +127,31 @@ export async function innerLoop(
 
   // 5. Build mutation context
   const archiveHistory = archive.getByArtifact(artifactId).slice(-5);
+
+  // Load rubric content so the mutation LLM knows what the judge scores on
+  let rubricContent: string | undefined;
+  const llmJudgeChainItem = artifactConfig.scorer.chain.find(
+    (item) => item.type === 'llm-judge' && item.rules_file,
+  );
+  if (llmJudgeChainItem?.rules_file) {
+    try {
+      rubricContent = readFileSync(resolve(projectRoot, llmJudgeChainItem.rules_file), 'utf-8');
+    } catch {
+      // Rubric file not found — mutation LLM will proceed without it
+    }
+  }
+
+  // Extract per-criterion checks from baseline scorecard
+  const baselineChecks = extractScorecardChecks(baselineScorecard);
+
   const context: MutationContext = {
     artifact: artifact.content,
     artifactType: artifact.type,
     scorecard: baselineScorecard,
     archiveHistory,
     metaStrategy,
+    rubricContent,
+    scorecardChecks: baselineChecks.length > 0 ? baselineChecks : undefined,
   };
 
   // 6. Propose mutation

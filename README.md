@@ -59,20 +59,24 @@ my-agent: 91/100 (91%)
 
 ## How Kultiv Thinks
 
-1. **Score** your artifact against a chain of tests (compiler, test suite, linter, LLM judge)
-2. **Mutate** one thing using a single LLM call (add a rule, simplify, reorder, rephrase...)
+1. **Score** your artifact against a chain of tests (compiler, test suite, linter, LLM judge) with per-criterion breakdowns
+2. **Mutate** using a 4-round dialogue engine (Explore → Critique → Specify → Generate) that sees the rubric and knows which criteria are weakest
 3. **Re-score** the mutated version with the same tests
 4. **Keep or revert** -- better score? Keep. Worse? Revert automatically
 5. **Learn** -- after every few experiments, Kultiv revises its own mutation strategy based on what worked
+6. **Report** -- when plateaued, generates improvement reports identifying the weakest criteria and what the next scoring tier requires
 
 ## Features
 
+- **4-round dialogue mutations** -- Explore → Critique → Specify → Generate. The mutation LLM sees your rubric and per-criterion scores, so it targets the weakest areas instead of making blind changes
 - **9 mutation types** -- add rules, add examples, simplify, reorder, rephrase, merge, restructure, delete, add negative examples
-- **Tests that cost nothing** -- run your existing test suites, linters, and compilers as scorers. Zero LLM tokens for deterministic checks
-- **Knows when it's stuck** -- detects plateaus, type fixation, overfitting, and bloat using pure math on your experiment history
+- **Calibrated scoring** -- graduated rubrics with 4-tier scoring ladders per criterion. Sum-based scoring (not holistic) prevents score inflation
+- **Pattern guardrails** -- regex rules in `require` or `forbid` mode catch structural regressions instantly, zero LLM tokens
+- **Tests that cost nothing** -- run your existing test suites, linters, and compilers as scorers
+- **Knows when it's stuck** -- detects plateaus, type fixation, overfitting, and bloat. Generates improvement reports identifying the weakest criteria and what the next tier requires
 - **Improves how it improves** -- a second evolution loop rewrites the mutation strategy based on what's actually working
-- **Runs while you sleep** -- hook into Claude Code post-session events or run a cron daemon in the background
-- **See progress at localhost:4200** -- built-in web dashboard shows scores, mutation history, and anti-patterns
+- **Insights dashboard** -- built-in web dashboard at localhost:4200 shows scores, per-criterion breakdowns, improvement suggestions, and mutation history
+- **Runs while you sleep** -- hook into Claude Code post-session events or schedule via cron/Task Scheduler
 - **Works with Anthropic, OpenAI, Ollama, Claude Code** -- bring your own provider and model
 
 ## CLI Reference
@@ -134,6 +138,7 @@ evolution:
   feedback_interval: 3               # check for anti-patterns every 3 runs
   outer_interval: 10                 # revise mutation strategy every 10 runs
   plateau_window: 5                  # detect plateaus over 5-run windows
+  mutation_mode: dialogue            # dialogue (4-round) or single (1-shot)
 
 # Unattended evolution
 automation:
@@ -167,16 +172,27 @@ Kultiv scores artifacts using a chain of evaluators. Each one runs independently
   weight: 3
 ```
 
-**Pattern scorers** (`type: pattern`) -- regex rules against artifact content. Good for structural checks.
+**Pattern scorers** (`type: pattern`) -- regex rules against artifact content. Two modes:
+- `forbid` (default) -- penalize when a pattern IS found (e.g., banning `any` types)
+- `require` -- penalize when a pattern is NOT found (e.g., requiring auth checks)
 
 ```yaml
 - name: structure
   type: pattern
-  rules_file: .kultiv/pattern-rules.yaml
+  rules_file: .kultiv/pattern-rules.json
   weight: 1
 ```
 
-**LLM judges** (`type: llm-judge`) -- send artifact to the LLM with a rubric. Nuanced but costs tokens.
+```json
+{
+  "rules": [
+    { "pattern": "getUser", "message": "Must include auth check", "severity": "error", "mode": "require" },
+    { "pattern": "select\\('\\*'\\)", "message": "Avoid select('*')", "severity": "warning", "mode": "forbid" }
+  ]
+}
+```
+
+**LLM judges** (`type: llm-judge`) -- send artifact to the LLM with a graduated rubric. Each criterion has a 4-tier scoring ladder (Minimal → Adequate → Good → Excellent). Scores are summed per-criterion, not judged holistically, preventing score inflation.
 
 ```yaml
 - name: quality
@@ -185,7 +201,7 @@ Kultiv scores artifacts using a chain of evaluators. Each one runs independently
   weight: 1
 ```
 
-**Total score** = weighted sum across all evaluators, normalized to 100.
+**Total score** = weighted sum across all evaluators, normalized to 100. Per-criterion breakdowns are stored in the archive and shown in the dashboard.
 
 ## Mutation Types
 
@@ -315,15 +331,15 @@ kultiv init --preset nextjs
 
 ```
 src/
-  core/           config, archive (JSONL), artifact reader, trace store
-  scoring/        chain runner, command scorer, pattern scorer, LLM judge
-  mutation/       single-call LLM engine, apply/revert, type selection
+  core/           config, archive (JSONL + per-criterion checks), artifact reader, trace store
+  scoring/        chain runner, command scorer, pattern scorer (require/forbid), LLM judge (sum-based)
+  mutation/       4-round dialogue engine, single-call fallback, apply/revert
   detection/      plateau + anti-pattern heuristics (zero LLM tokens)
-  loops/          inner loop (mutate/score), outer loop (meta-strategy)
+  loops/          inner loop (mutate/score), outer loop (meta-strategy), improvement reports
   automation/     cron daemon, hook trigger, pending queue, lockfile
   llm/            Anthropic, OpenAI, Ollama, Claude Code adapters
   safety/         git branch-per-experiment, auto-merge, auto-abandon
-  dashboard/      Preact SPA served at localhost:4200
+  dashboard/      Preact SPA with insights panel, score charts, mutation history
 
 bin/
   kultiv.ts       CLI entry point (Commander.js)
@@ -336,16 +352,22 @@ templates/
 ### Data flow
 
 ```
-Artifact  -->  Score (test chain)  -->  Baseline archived
+Artifact  -->  Score (evaluator chain)  -->  Baseline + per-criterion breakdown
     |
     v
-Single LLM call  -->  Apply tweak  -->  Re-score  -->  Compare
-    |                                                      |
-    v                                                      v
- Keep (better)                                    Revert (worse)
+4-round dialogue (sees rubric + weak criteria)  -->  Targeted mutation
+    |
+    v
+Apply tweak  -->  Re-score  -->  Compare
+    |                               |
+    v                               v
+ Keep (better)              Revert (worse)
     |
     v
  Archive entry  -->  Anti-pattern check  -->  Strategy revision
+                                                    |
+                                                    v
+                                         Improvement report (if plateaued)
 ```
 
 ## Contributing

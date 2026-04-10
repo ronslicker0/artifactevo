@@ -11,6 +11,10 @@ export interface MutationContext {
   scorecard: Scorecard;
   archiveHistory: ArchiveEntry[];
   metaStrategy: string;
+  /** Rubric content (markdown) so mutation LLM knows what the judge scores on */
+  rubricContent?: string;
+  /** Per-criterion breakdown from last scoring run */
+  scorecardChecks?: Array<{ name: string; score: number; max: number; note?: string }>;
 }
 
 // ── Single-Call Mutation Proposer ────────────────────────────────────────

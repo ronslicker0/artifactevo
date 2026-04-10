@@ -21,6 +21,21 @@ export function buildExplorePrompt(context: MutationContext): string {
         .join('\n')
     : '  (no history)';
 
+  // Per-criterion breakdown — shows the mutation LLM exactly which criteria are weak
+  const checksBlock = context.scorecardChecks && context.scorecardChecks.length > 0
+    ? context.scorecardChecks
+        .map((c) => {
+          const pct = c.max > 0 ? Math.round((c.score / c.max) * 100) : 0;
+          return `  ${c.name}: ${c.score}/${c.max} (${pct}%)${c.note ? ` — ${c.note}` : ''}`;
+        })
+        .join('\n')
+    : null;
+
+  // Rubric content — shows what the judge is actually scoring on
+  const rubricBlock = context.rubricContent
+    ? `\n## Judge Rubric (what the scorer evaluates)\n${context.rubricContent}\n`
+    : '';
+
   return `You are a Kultiv evolution engine performing the EXPLORE phase. Your job is to brainstorm 3-5 candidate improvements for the artifact below.
 
 ## Meta-Strategy
@@ -35,17 +50,20 @@ ${context.artifact}
 
 ## Current Scorecard (${context.scorecard.percentage.toFixed(1)}%)
 ${scorecardBlock}
-
+${checksBlock ? `\n### Per-Criterion Breakdown\n${checksBlock}` : ''}
+${rubricBlock}
 ## Recent Archive History (last ${context.archiveHistory.length})
 ${historyBlock}
 
 ## Task: EXPLORE
 
 Analyze the artifact and scorecard. Brainstorm 3-5 candidate improvements. Each candidate MUST use a DIFFERENT mutation type. Consider:
-- Which evaluators are failing or scoring low? What root cause could fix them?
+- Which SPECIFIC CRITERIA are scoring lowest? Target those first.
+- Read the rubric tier descriptions — what does the NEXT tier up require?
 - What mutation types from the meta-strategy priority order fit best?
 - What is the regression risk of each candidate?
 - Avoid repeating mutation types from recent history unless strongly justified.
+- CRITICAL: Do NOT restructure or reorder the artifact unless a criterion specifically requires it. Prefer ADD_RULE or ADD_EXAMPLE that inject new content into the existing structure without disrupting what already works.
 
 Respond with a JSON code block:
 
