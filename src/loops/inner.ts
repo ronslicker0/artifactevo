@@ -6,6 +6,7 @@ import { Archive, type ArchiveEntry } from '../core/archive.js';
 import { loadArtifact } from '../core/artifact.js';
 import type { LLMProvider } from '../llm/provider.js';
 import { proposeMutation, type MutationContext } from '../mutation/single-call.js';
+import { proposeDialogueMutation } from '../mutation/dialogue.js';
 import { applyMutation, revertMutation, cleanupBackup } from '../mutation/apply.js';
 import { runChain, type Scorecard } from '../scoring/chain-runner.js';
 import {
@@ -111,7 +112,9 @@ export async function innerLoop(
   // 6. Propose mutation
   let mutationResult;
   try {
-    mutationResult = await proposeMutation(context, provider);
+    mutationResult = config.evolution.mutation_mode === 'dialogue'
+      ? await proposeDialogueMutation(context, provider)
+      : await proposeMutation(context, provider);
   } catch (err) {
     return makeCrashResult(genid, artifactId, archive, err);
   }
@@ -249,6 +252,7 @@ export async function innerLoop(
     timestamp: new Date().toISOString(),
     token_cost: tokenCost,
     automated: false,
+    ...(mutationResult.dialogue_trace ? { dialogue_trace: mutationResult.dialogue_trace } : {}),
   };
   archive.append(entry);
 

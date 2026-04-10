@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import type { DialogueTrace } from '../mutation/types.js';
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -20,6 +21,7 @@ export interface ArchiveEntry {
   timestamp: string;
   token_cost: number | null;
   automated: boolean;
+  dialogue_trace?: DialogueTrace;
 }
 
 export type ArchiveFilter = Partial<Pick<ArchiveEntry, 'artifact' | 'status' | 'run_id' | 'automated'>>;

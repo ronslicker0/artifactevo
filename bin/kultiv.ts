@@ -642,7 +642,7 @@ program
         version: '1.0',
         artifacts: {},
         llm: { provider: 'anthropic', model: 'claude-sonnet-4-20250514' },
-        evolution: { budget_per_session: 10, feedback_interval: 3, outer_interval: 10, plateau_window: 5 },
+        evolution: { budget_per_session: 10, feedback_interval: 3, outer_interval: 10, plateau_window: 5, mutation_mode: 'single' as const },
         automation: { hook_mode: false, daemon_mode: false, trigger_after: 1, cooldown_minutes: 10, auto_commit: true, auto_push: false, max_regressions_before_pause: 3 },
         dashboard: { port: 4200, open_browser: true },
         meta_strategy_path: '.kultiv/meta-strategy.md',

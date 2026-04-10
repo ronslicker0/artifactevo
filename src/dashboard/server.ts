@@ -171,6 +171,18 @@ export async function startDashboard(
     return c.json({ manifest, scorecard, errors });
   });
 
+  // ── API: Archive Entry Detail ────────────────────────────────────────
+  app.get('/api/archive/:genid', (c) => {
+    const genid = parseInt(c.req.param('genid'), 10);
+    if (isNaN(genid)) return c.json({ error: 'Invalid genid' }, 400);
+
+    const archive = getArchive(absEvoDir);
+    const entry = archive.getAll().find((e) => e.genid === genid);
+    if (!entry) return c.json({ error: 'Entry not found' }, 404);
+
+    return c.json(entry);
+  });
+
   // ── API: Anti-patterns ──────────────────────────────────────────────
   app.get('/api/anti-patterns', (c) => {
     const archive = getArchive(absEvoDir);

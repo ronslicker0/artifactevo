@@ -15,6 +15,7 @@ evolution:
   feedback_interval: 3      # heuristic anti-pattern check every N runs
   outer_interval: 10        # meta-strategy revision every M runs
   plateau_window: 5         # score window for plateau detection
+  # mutation_mode: dialogue  # 'single' (default) or 'dialogue' (4-round reasoning)
 
 # Automation
 automation:

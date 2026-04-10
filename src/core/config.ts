@@ -37,6 +37,7 @@ const EvolutionConfigSchema = z.object({
   feedback_interval: z.number().int().positive().default(3),
   outer_interval: z.number().int().positive().default(10),
   plateau_window: z.number().int().positive().default(5),
+  mutation_mode: z.enum(['single', 'dialogue']).default('single'),
 });
 
 const AutomationConfigSchema = z.object({

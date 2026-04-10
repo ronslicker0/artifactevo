@@ -98,6 +98,18 @@ textarea.pg-input{font-family:'Consolas','Monaco','Courier New',monospace;font-s
 .sc-reasoning{padding:4px 12px 8px;font-size:13px;color:var(--text2);font-style:italic}
 .btn-green{background:var(--green)!important}
 .save-section{border-top:1px solid var(--border);padding-top:12px;margin-top:16px}
+.dlg-detail{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:16px;margin:8px 0}
+.dlg-detail h5{font-size:13px;color:var(--blue);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
+.dlg-candidates{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.dlg-candidate{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:13px}
+.dlg-candidate.selected{border-color:var(--green);background:rgba(34,197,94,.05)}
+.dlg-candidate .dlg-type{font-weight:600;margin-right:8px}
+.dlg-reasoning{background:var(--surface);border-radius:6px;padding:12px;font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.6}
+.dlg-spec{background:var(--surface);border-radius:6px;padding:12px;font-size:13px;margin-bottom:12px}
+.dlg-spec .dlg-field{margin-bottom:6px}
+.dlg-spec .dlg-label{color:var(--text2);font-size:11px;text-transform:uppercase;letter-spacing:.3px}
+.dlg-tokens{display:flex;gap:16px;font-size:12px;color:var(--text2);margin-top:8px}
+tr.expanded td{border-bottom:none}
 </style>
 </head>
 <body>
@@ -119,6 +131,70 @@ const api=async(path,opts)=>{
 const post=(path,body)=>api(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 const fmtDate=(s)=>s?new Date(s).toLocaleString():'—';
 const pct=(n,d)=>d>0?Math.round(n/d*100):0;
+
+// ── Dialogue Detail Component ───────────────────────────────────────
+function DialogueDetail({trace}){
+  if(!trace)return html\`<div class="dlg-detail"><div class="empty" style="padding:12px">Single-call mutation (no dialogue trace)</div></div>\`;
+  const t=trace;
+  return html\`<div class="dlg-detail">
+    <h5>Explore — \${t.explore_candidates.length} Candidates</h5>
+    <div class="dlg-candidates">
+      \${t.explore_candidates.map((c,i)=>html\`<div class="dlg-candidate \${c.mutation_type===t.selected_candidate.mutation_type&&c.target===t.selected_candidate.target?'selected':''}">
+        <span class="dlg-type">[\${c.mutation_type}]</span>
+        <span>\${c.target}</span>
+        <span class="badge \${c.regression_risk}" style="margin-left:8px">\${c.regression_risk} risk</span>
+        <div style="color:var(--text2);margin-top:4px">\${c.rationale}</div>
+      </div>\`)}
+    </div>
+    <h5>Critique — Why This Candidate</h5>
+    <div class="dlg-reasoning">\${t.critique_reasoning}</div>
+    <h5>Specification</h5>
+    <div class="dlg-spec">
+      <div class="dlg-field"><span class="dlg-label">Type: </span>\${t.selected_candidate.mutation_type}</div>
+      <div class="dlg-field"><span class="dlg-label">Target: </span>\${t.selected_candidate.target}</div>
+      <div class="dlg-field"><span class="dlg-label">Change: </span>\${t.specification}</div>
+    </div>
+    <div class="dlg-tokens">
+      <span>Rounds: \${t.rounds_completed}/4</span>
+      <span>Input tokens: \${t.total_input_tokens.toLocaleString()}</span>
+      <span>Output tokens: \${t.total_output_tokens.toLocaleString()}</span>
+    </div>
+  </div>\`;
+}
+
+// ── Expandable Mutation Table ────────────────────────────────────────
+function MutationTable({entries,showArtifact}){
+  const[expanded,setExpanded]=useState(null);
+  const[detail,setDetail]=useState(null);
+
+  const toggle=async(genid)=>{
+    if(expanded===genid){setExpanded(null);setDetail(null);return}
+    setExpanded(genid);
+    const entry=entries.find(e=>e.genid===genid);
+    if(entry&&entry.dialogue_trace){setDetail(entry.dialogue_trace);return}
+    const d=await api('archive/'+genid);
+    setDetail(d.error?null:(d.dialogue_trace||null));
+  };
+
+  if(!entries||entries.length===0)return html\`<div class="empty">No mutations yet</div>\`;
+
+  return html\`<table>
+    <tr><th>Gen</th>\${showArtifact?html\`<th>Artifact</th>\`:null}<th>Type</th><th>Score</th><th>Status</th><th>Time</th></tr>
+    \${entries.map(e=>html\`<\${Fragment}>
+      <tr class="clickable \${expanded===e.genid?'expanded':''}" onclick=\${()=>toggle(e.genid)}>
+        <td>\${e.genid}</td>
+        \${showArtifact?html\`<td>\${e.artifact}</td>\`:null}
+        <td>\${e.mutation_type}</td>
+        <td>\${e.score!==null?\`\${e.score}/\${e.max_score}\`:'—'}</td>
+        <td><span class="badge \${e.status}">\${e.status}</span></td>
+        <td style="color:var(--text2)">\${fmtDate(e.timestamp)}</td>
+      </tr>
+      \${expanded===e.genid?html\`<tr><td colspan="\${showArtifact?6:5}" style="padding:0 12px 12px">
+        <\${DialogueDetail} trace=\${detail}/>
+      </td></tr>\`:null}
+    </\${Fragment}>\`)}
+  </table>\`;}
+
 
 // ── SVG Line Chart ───────────────────────────────────────────────────
 function LineChart({series,width=600,height=200}){
@@ -209,15 +285,7 @@ function Overview(){
     </div>
     <div class="panel mt">
       <h3 class="mb">Recent Mutations</h3>
-      \${recent.length===0?html\`<div class="empty">No mutations yet</div>\`:html\`<table>
-        <tr><th>Gen</th><th>Artifact</th><th>Type</th><th>Score</th><th>Status</th><th>Time</th></tr>
-        \${recent.map(e=>html\`<tr>
-          <td>\${e.genid}</td><td>\${e.artifact}</td><td>\${e.mutation_type}</td>
-          <td>\${e.score!==null?\`\${e.score}/\${e.max_score}\`:'—'}</td>
-          <td><span class="badge \${e.status}">\${e.status}</span></td>
-          <td style="color:var(--text2)">\${fmtDate(e.timestamp)}</td>
-        </tr>\`)}
-      </table>\`}
+      <\${MutationTable} entries=\${recent} showArtifact=\${true}/>
     </div>\`;
 }
 
@@ -280,14 +348,7 @@ function Artifacts(){
         </div>
         <div class="col">
           <h4 class="mb">Recent Mutations</h4>
-          \${(detail.recent_mutations||[]).length===0?html\`<div class="empty">None</div>\`:html\`<table>
-            <tr><th>Gen</th><th>Type</th><th>Score</th><th>Status</th></tr>
-            \${detail.recent_mutations.map(m=>html\`<tr>
-              <td>\${m.genid}</td><td>\${m.mutation_type}</td>
-              <td>\${m.score!==null?\`\${m.score}/\${m.max_score}\`:'—'}</td>
-              <td><span class="badge \${m.status}">\${m.status}</span></td>
-            </tr>\`)}
-          </table>\`}
+          <\${MutationTable} entries=\${detail.recent_mutations||[]} showArtifact=\${false}/>
         </div>
       </div>
       \${detail.preview?html\`<div class="mt"><h4 class="mb">Content Preview</h4><pre>\${detail.preview}</pre></div>\`:null}
@@ -347,15 +408,7 @@ function Evolution(){
     </div>\`:null}
     <div class="panel mt">
       <h3 class="mb">Mutation Log</h3>
-      \${(log||[]).length===0?html\`<div class="empty">No mutations yet</div>\`:html\`<table>
-        <tr><th>Gen</th><th>Artifact</th><th>Type</th><th>Score</th><th>Status</th><th>Time</th></tr>
-        \${log.map(e=>html\`<tr>
-          <td>\${e.genid}</td><td>\${e.artifact}</td><td>\${e.mutation_type}</td>
-          <td>\${e.score!==null?\`\${e.score}/\${e.max_score}\`:'—'}</td>
-          <td><span class="badge \${e.status}">\${e.status}</span></td>
-          <td style="color:var(--text2)">\${fmtDate(e.timestamp)}</td>
-        </tr>\`)}
-      </table>\`}
+      <\${MutationTable} entries=\${log||[]} showArtifact=\${true}/>
     </div>\`;
 }
 
