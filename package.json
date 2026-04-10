@@ -7,19 +7,29 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ronslicker0/kultiv.git"
+    "url": "git+https://github.com/ronslicker0/kultiv.git"
   },
   "homepage": "https://github.com/ronslicker0/kultiv#readme",
   "bugs": {
     "url": "https://github.com/ronslicker0/kultiv/issues"
   },
   "keywords": [
-    "ai-agents", "prompt-engineering", "prompt-optimization", "genetic-algorithm",
-    "agent-framework", "llm", "cli", "automation", "ai-tools", "prompt-tuning",
-    "anthropic", "openai", "ollama"
+    "ai-agents",
+    "prompt-engineering",
+    "prompt-optimization",
+    "genetic-algorithm",
+    "agent-framework",
+    "llm",
+    "cli",
+    "automation",
+    "ai-tools",
+    "prompt-tuning",
+    "anthropic",
+    "openai",
+    "ollama"
   ],
   "bin": {
-    "kultiv": "./dist/bin/kultiv.js"
+    "kultiv": "dist/bin/kultiv.js"
   },
   "files": [
     "dist/",
