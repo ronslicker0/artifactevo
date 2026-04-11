@@ -107,13 +107,14 @@ export async function runInitWizard(evoDir: string): Promise<void> {
   }
 
   // Step 5: Choose preset
-  const _preset = await select({
+  const presetKey = await select({
     message: 'Project type (determines default scorers):',
     choices: Object.entries(PRESETS).map(([key, val]) => ({
       name: val.label,
       value: key,
     })),
   });
+  const preset = PRESETS[presetKey];
 
   // Step 6: Create .kultiv/ directory structure
   mkdirSync(join(evoDir, 'pending'), { recursive: true });
@@ -122,7 +123,15 @@ export async function runInitWizard(evoDir: string): Promise<void> {
   // Step 7: Write config.yaml
   const config: Record<string, unknown> = {
     version: '1.0',
-    artifacts: {},
+    artifacts: {
+      example: {
+        path: './REPLACE_ME.md',
+        type: 'prompt',
+        scorer: {
+          chain: preset.scorer,
+        },
+      },
+    },
     llm: {
       provider,
       model,

@@ -355,13 +355,13 @@ export async function innerLoop(
   } else {
     // Equal score — keep the mutation (neutral/lateral move)
     status = 'neutral';
-    cleanupBackup(backupPath);
-  }
-
-  // In safe mode, revert neutral mutations too
-  if (options?.safe && status === 'neutral') {
-    revertMutation(artifact.path, backupPath);
-    if (gitCtx) abandonExperiment(gitCtx);
+    if (options?.safe) {
+      // In safe mode, revert neutral mutations too
+      revertMutation(artifact.path, backupPath);
+      if (gitCtx) abandonExperiment(gitCtx);
+    } else {
+      cleanupBackup(backupPath);
+    }
   }
 
   // Git safety: always ensure we return to base branch

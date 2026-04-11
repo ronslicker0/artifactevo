@@ -34,7 +34,7 @@ function isStale(info: LockInfo): boolean {
 export function acquireLock(evoDir: string): boolean {
   const path = lockPath(evoDir);
 
-  // Check for existing lock
+  // Handle existing lock (stale or malformed)
   if (existsSync(path)) {
     try {
       const raw = readFileSync(path, 'utf-8');
@@ -59,12 +59,19 @@ export function acquireLock(evoDir: string): boolean {
     mkdirSync(dir, { recursive: true });
   }
 
-  // Write lock file
+  // Atomic write — exclusive create fails if another process raced us
   const info: LockInfo = {
     pid: process.pid,
     timestamp: new Date().toISOString(),
   };
-  writeFileSync(path, JSON.stringify(info, null, 2), 'utf-8');
+  try {
+    writeFileSync(path, JSON.stringify(info, null, 2), { encoding: 'utf-8', flag: 'wx' });
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'EEXIST') {
+      return false; // Another process acquired the lock between our check and write
+    }
+    throw err;
+  }
 
   return true;
 }

@@ -3,6 +3,7 @@
 import { Command } from 'commander';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync, unlinkSync } from 'node:fs';
 import { resolve, join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import yaml from 'js-yaml';
 import { loadConfig, type EvoConfig } from '../src/core/config.js';
 import { Archive, type ArchiveEntry } from '../src/core/archive.js';
@@ -76,7 +77,7 @@ program
     // Copy config template
     const configDest = join(kultivDir, 'config.yaml');
     if (!existsSync(configDest)) {
-      const templatePath = resolve(dirname(new URL(import.meta.url).pathname), '..', 'templates', 'config.template.yaml');
+      const templatePath = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'templates', 'config.template.yaml');
       if (existsSync(templatePath)) {
         copyFileSync(templatePath, configDest);
       } else {
@@ -90,7 +91,7 @@ program
     // Copy meta-strategy template
     const strategyDest = join(kultivDir, 'meta-strategy.md');
     if (!existsSync(strategyDest)) {
-      const templatePath = resolve(dirname(new URL(import.meta.url).pathname), '..', 'templates', 'meta-strategy.template.md');
+      const templatePath = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'templates', 'meta-strategy.template.md');
       if (existsSync(templatePath)) {
         copyFileSync(templatePath, strategyDest);
       } else {
@@ -561,9 +562,8 @@ daemonCmd
       console.log(green(`Sent SIGTERM to daemon (PID: ${pid})`));
     } catch {
       console.log(yellow(`Could not signal PID ${pid} — cleaning up stale PID file.`));
-      const { unlinkSync: rmSync } = require('node:fs');
       const pidFile = join(kultivDir, 'daemon.pid');
-      if (existsSync(pidFile)) rmSync(pidFile);
+      if (existsSync(pidFile)) unlinkSync(pidFile);
     }
   });
 

@@ -4,7 +4,6 @@ import {
   writeFileSync,
   appendFileSync,
   existsSync,
-  readdirSync,
 } from 'node:fs';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
@@ -227,5 +226,5 @@ export function listRuns(
   }
 
   // Most recent first
-  return runs.reverse();
+  return [...runs].reverse();
 }

@@ -146,12 +146,16 @@ function writeImprovementReport(
   // Build per-criterion breakdown
   let criteriaSection = '';
   if (checks.length > 0) {
-    const sorted = [...checks].sort((a, b) => (a.score / a.max) - (b.score / b.max));
+    const sorted = [...checks].sort((a, b) => {
+      const aRatio = a.max > 0 ? a.score / a.max : 0;
+      const bRatio = b.max > 0 ? b.score / b.max : 0;
+      return aRatio - bRatio;
+    });
     criteriaSection = `## Per-Criterion Breakdown\n\n`;
     criteriaSection += `| Criterion | Score | Max | % | Status |\n`;
     criteriaSection += `|-----------|-------|-----|---|--------|\n`;
     for (const c of sorted) {
-      const pct = Math.round((c.score / c.max) * 100);
+      const pct = c.max > 0 ? Math.round((c.score / c.max) * 100) : 0;
       const status = pct >= 75 ? 'Good' : pct >= 50 ? 'Adequate' : 'Needs Work';
       criteriaSection += `| ${c.name} | ${c.score} | ${c.max} | ${pct}% | ${status} |\n`;
     }
