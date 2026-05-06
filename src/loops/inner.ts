@@ -26,6 +26,7 @@ import { selectChallenge } from '../selection/challenge.js';
 import { loadChallenges } from '../challenges/loader.js';
 import { verifySemantic } from '../guards/semantic-diff.js';
 import { crossValidate, detectRegression } from '../scoring/cross-validator.js';
+import { readPatternsFile, buildFocusAreasBlock } from '../dreaming/patterns.js';
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -220,6 +221,11 @@ export async function innerLoop(
   const kultivDir = resolve(projectRoot, '.kultiv');
   const scanAnalysis = loadScanAnalysis(kultivDir, artifactId);
 
+  // Load dream-surfaced focus areas if available — cross-session patterns
+  // bias mutation toward addressing what's actually recurring in real use.
+  const dreamPatterns = readPatternsFile(join(kultivDir, 'dreams', 'patterns.md'));
+  const dreamFocusAreas = buildFocusAreasBlock(dreamPatterns, artifactId);
+
   const context: MutationContext = {
     artifact: artifact.content,
     artifactType: artifact.type,
@@ -230,6 +236,7 @@ export async function innerLoop(
     scorecardChecks: baselineChecks.length > 0 ? baselineChecks : undefined,
     failureContext,
     scanAnalysis,
+    dreamFocusAreas: dreamFocusAreas.length > 0 ? dreamFocusAreas : undefined,
   };
 
   // 7. Propose mutation (with beam search support)

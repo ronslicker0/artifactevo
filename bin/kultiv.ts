@@ -819,6 +819,15 @@ program
         outer_loop: { mode: 'dialogue' as const, validation_batch_size: 3 },
         automation: { hook_mode: false, daemon_mode: false, trigger_after: 1, cooldown_minutes: 10, auto_commit: true, auto_push: false, max_regressions_before_pause: 3 },
         dashboard: { port: 4200, open_browser: true },
+        dreaming: {
+          enabled: false,
+          max_sessions: 20,
+          within_days: 14,
+          cooldown_hours: 6,
+          auto_apply: false,
+          input_cost_per_mtok: 3,
+          output_cost_per_mtok: 15,
+        },
         meta_strategy_path: '.kultiv/meta-strategy.md',
       };
     }
@@ -826,6 +835,218 @@ program
     const openBrowser = opts.kultivDir ? false : config.dashboard.open_browser;
     await startDashboard(port, kultivDir, openBrowser);
   });
+
+// ── Dream Commands ──────────────────────────────────────────────────────
+
+import { runDream, applyDream, rejectDream } from '../src/dreaming/dreamer.js';
+import { DreamHistory } from '../src/dreaming/history.js';
+
+const dreamCmd = program.command('dream').description('Memory consolidation across past sessions');
+
+dreamCmd
+  .command('run', { isDefault: true })
+  .description('Run a dream now — produces proposed memory + patterns for review')
+  .option('--force', 'Bypass cooldown')
+  .option('--auto-apply', 'Apply the dream output to live memory if it succeeds')
+  .option('--instructions <text>', 'Per-run focus instructions appended to the prompt')
+  .option('--memory-dir <path>', 'Override memory tier path')
+  .option('--sessions-dir <path>', 'Override Claude Code sessions path')
+  .option('--max-sessions <n>', 'Max sessions to consume', (v) => parseInt(v, 10))
+  .option('--within-days <n>', 'Lookback window', (v) => parseInt(v, 10))
+  .option('--kultiv-dir <path>', 'Path to .kultiv directory', '.kultiv')
+  .action(async (opts) => {
+    const configPath = resolveConfigPath({ config: program.opts<{ config?: string }>().config });
+    const config = loadConfig(configPath);
+    const kultivDir = resolve(opts.kultivDir ?? '.kultiv');
+
+    const memoryDir = resolve(opts.memoryDir ?? config.dreaming.memory_dir ?? defaultMemoryDir());
+    const sessionsDir = resolve(opts.sessionsDir ?? config.dreaming.sessions_dir ?? defaultSessionsDir());
+    const archivePath = join(kultivDir, 'archive.jsonl');
+
+    const llmConfig = config.dreaming.model
+      ? { ...config.llm, model: config.dreaming.model }
+      : config.llm;
+    const provider = createProvider(llmConfig);
+
+    console.log(bold('Kultiv Dream'));
+    console.log(dim(`  Memory:  ${memoryDir}`));
+    console.log(dim(`  Sessions:${sessionsDir}`));
+    console.log(dim(`  Model:   ${llmConfig.model}`));
+    console.log('');
+
+    const out = await runDream(
+      {
+        evoDir: kultivDir,
+        memoryDir,
+        sessionsDir,
+        archivePath,
+        provider,
+        modelId: llmConfig.model,
+        inputCostPerMTok: config.dreaming.input_cost_per_mtok,
+        outputCostPerMTok: config.dreaming.output_cost_per_mtok,
+        maxSessions: opts.maxSessions ?? config.dreaming.max_sessions,
+        withinDays: opts.withinDays ?? config.dreaming.within_days,
+        instructions: opts.instructions ?? config.dreaming.instructions,
+      },
+      {
+        force: opts.force === true,
+        autoApply: opts.autoApply === true || config.dreaming.auto_apply,
+        cooldownHours: config.dreaming.cooldown_hours,
+      },
+    );
+
+    if (out.skipped) {
+      console.log(yellow(`Skipped: ${out.skipped}${out.result.error ? ` — ${out.result.error}` : ''}`));
+      return;
+    }
+
+    if (out.result.status === 'failed') {
+      console.log(red(`Dream FAILED: ${out.result.error ?? 'unknown error'}`));
+      if (out.result.summaryPath) console.log(dim(`  details: ${out.result.summaryPath}`));
+      process.exitCode = 1;
+      return;
+    }
+
+    console.log(green('Dream completed.'));
+    console.log(dim(`  id:        ${out.result.id}`));
+    console.log(dim(`  patterns:  ${out.result.patterns.length}`));
+    console.log(dim(`  tokens:    in=${out.result.inputTokens}, out=${out.result.outputTokens}`));
+    console.log(dim(`  cost:      $${out.result.estimatedCostUsd.toFixed(4)}`));
+    if (out.applied) {
+      console.log(green('  applied:   yes (live memory updated)'));
+    } else {
+      console.log(dim(`  proposal:  ${out.result.summaryPath ?? out.result.proposedMemoryPath}`));
+      console.log(dim(`  apply:     kultiv dream apply ${out.result.id}`));
+    }
+  });
+
+dreamCmd
+  .command('list')
+  .description('Show recent dreams')
+  .option('--kultiv-dir <path>', 'Path to .kultiv directory', '.kultiv')
+  .option('-n, --limit <n>', 'Max entries', (v) => parseInt(v, 10), 20)
+  .action((opts) => {
+    const kultivDir = resolve(opts.kultivDir ?? '.kultiv');
+    const history = new DreamHistory(join(kultivDir, 'dreams', 'history.jsonl'));
+    const entries = history.list(opts.limit);
+    if (entries.length === 0) {
+      console.log(dim('(no dreams yet)'));
+      return;
+    }
+    for (const e of entries) {
+      const status = e.status === 'completed' ? green(e.status) : e.status === 'failed' ? red(e.status) : yellow(e.status);
+      const applied = e.applied ? green('applied') : dim('proposed');
+      console.log(`${e.id}  ${status}  ${applied}  patterns=${e.patternCount}  cost=$${e.estimatedCostUsd.toFixed(4)}`);
+    }
+  });
+
+dreamCmd
+  .command('apply <id>')
+  .description('Apply a previously-proposed dream to live memory')
+  .option('--memory-dir <path>', 'Override memory tier path')
+  .option('--kultiv-dir <path>', 'Path to .kultiv directory', '.kultiv')
+  .action((id, opts) => {
+    const kultivDir = resolve(opts.kultivDir ?? '.kultiv');
+    const proposalDir = join(kultivDir, 'dreams', 'proposed', id);
+    const proposedMemory = join(proposalDir, 'MEMORY.md');
+    if (!existsSync(proposedMemory)) {
+      console.log(red(`No proposal found at ${proposalDir}`));
+      process.exitCode = 1;
+      return;
+    }
+    const memoryDir = resolve(opts.memoryDir ?? defaultMemoryDir());
+    const written = applyDream(
+      { memoryDir, evoDir: kultivDir },
+      // Reconstruct minimal DreamResult — only proposedMemoryPath is required for apply.
+      {
+        id,
+        status: 'completed',
+        startedAt: '',
+        completedAt: null,
+        model: '',
+        inputSessionIds: [],
+        inputTokens: 0,
+        outputTokens: 0,
+        estimatedCostUsd: 0,
+        proposedMemoryPath: proposedMemory,
+        proposedPatternsPath: null,
+        summaryPath: null,
+        patterns: [],
+      },
+    );
+    new DreamHistory(join(kultivDir, 'dreams', 'history.jsonl')).markApplied(id, new Date().toISOString());
+    console.log(green(`Applied dream ${id} — ${written.length} files updated.`));
+  });
+
+dreamCmd
+  .command('reject <id>')
+  .description('Reject a previously-proposed dream (moves it to rejected/)')
+  .option('--kultiv-dir <path>', 'Path to .kultiv directory', '.kultiv')
+  .action((id, opts) => {
+    const kultivDir = resolve(opts.kultivDir ?? '.kultiv');
+    const proposalDir = join(kultivDir, 'dreams', 'proposed', id);
+    const proposedMemory = join(proposalDir, 'MEMORY.md');
+    if (!existsSync(proposedMemory)) {
+      console.log(red(`No proposal found at ${proposalDir}`));
+      process.exitCode = 1;
+      return;
+    }
+    const target = rejectDream(
+      { evoDir: kultivDir },
+      {
+        id,
+        status: 'completed',
+        startedAt: '',
+        completedAt: null,
+        model: '',
+        inputSessionIds: [],
+        inputTokens: 0,
+        outputTokens: 0,
+        estimatedCostUsd: 0,
+        proposedMemoryPath: proposedMemory,
+        proposedPatternsPath: null,
+        summaryPath: null,
+        patterns: [],
+      },
+    );
+    console.log(green(`Rejected dream ${id} — moved to ${target}`));
+  });
+
+dreamCmd
+  .command('patterns')
+  .description('Print the active dream patterns the mutation engine consumes')
+  .option('--kultiv-dir <path>', 'Path to .kultiv directory', '.kultiv')
+  .action((opts) => {
+    const kultivDir = resolve(opts.kultivDir ?? '.kultiv');
+    const path = join(kultivDir, 'dreams', 'patterns.md');
+    if (!existsSync(path)) {
+      console.log(dim('(no patterns yet — run `kultiv dream` first)'));
+      return;
+    }
+    process.stdout.write(readFileSync(path, 'utf-8'));
+  });
+
+function defaultMemoryDir(): string {
+  const home = process.env.USERPROFILE ?? process.env.HOME ?? '.';
+  // The default targets Claude Code's per-project memory dir for the CWD.
+  // Users who want a different location should set dreaming.memory_dir.
+  const projectSlug = process.cwd()
+    .replace(/[/\\]/g, '-')
+    .replace(/[^A-Za-z0-9.-]/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
+  return join(home, '.claude', 'projects', projectSlug, 'memory');
+}
+
+function defaultSessionsDir(): string {
+  const home = process.env.USERPROFILE ?? process.env.HOME ?? '.';
+  const projectSlug = process.cwd()
+    .replace(/[/\\]/g, '-')
+    .replace(/[^A-Za-z0-9.-]/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
+  return join(home, '.claude', 'projects', projectSlug);
+}
 
 // ── Parse ───────────────────────────────────────────────────────────────
 

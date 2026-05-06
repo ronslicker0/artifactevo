@@ -33,5 +33,27 @@ dashboard:
   port: 4200
   open_browser: true
 
+# Dreaming — memory consolidation across past sessions.
+# Disabled by default. When enabled, `kultiv dream` (or the daemon's dreaming
+# tick) reads recent Claude Code session JSONLs plus a markdown memory tier,
+# asks an LLM to consolidate them, and writes cross-session patterns to
+# `.kultiv/dreams/patterns.md` for the mutation engine to consume.
+dreaming:
+  enabled: false
+  # Override the model — Sonnet is plenty for memory consolidation
+  # model: claude-sonnet-4-20250514
+  # Where the markdown memory tier lives (defaults to Claude Code's per-project memory dir).
+  # memory_dir: ~/.claude/projects/<slug>/memory
+  # Where Claude Code session .jsonl files live (defaults to per-project dir).
+  # sessions_dir: ~/.claude/projects/<slug>
+  max_sessions: 20
+  within_days: 14
+  cooldown_hours: 6
+  auto_apply: false        # require manual review by default
+  input_cost_per_mtok: 3
+  output_cost_per_mtok: 15
+  # Optional per-run focus instructions appended to the dream prompt.
+  # instructions: "Pay extra attention to security-related patterns."
+
 # Meta-strategy file (self-improving mutation strategy)
 meta_strategy_path: .kultiv/meta-strategy.md

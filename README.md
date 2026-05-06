@@ -93,6 +93,14 @@ my-agent: 91/100 (91%)
 - **Improves how it improves** -- outer loop rewrites the mutation strategy. Dialogue mode uses 3-round revision with mini-batch validation
 - **Diagnostic mutations** -- feeds real production failures from `.kultiv/pending/` into the mutation engine
 
+### Dreaming (memory consolidation)
+- **Reads recent Claude Code sessions** -- transcripts in `~/.claude/projects/<project>/*.jsonl` plus the project's markdown memory tier
+- **Surfaces cross-session patterns** -- recurring mistakes, user preferences, incidents — written to `.kultiv/dreams/patterns.md`
+- **Mutation engine reads patterns** -- the next `kultiv evolve` run uses dream patterns as focus areas, biasing mutations toward fixing what's actually recurring
+- **Review or auto-apply** -- proposed `MEMORY.md` lands in `.kultiv/dreams/proposed/<id>/` first; backups preserved when applied
+- **Cooldown-protected** -- daemon and scheduled runs respect `dreaming.cooldown_hours` to avoid double-spending
+- **`kultiv dream`** -- run on demand. `kultiv dream apply <id>` / `reject <id>` / `list` / `patterns` for review
+
 ### Operations
 - **Agent scanning** -- `kultiv scan` analyzes any prompt for purpose, structure, and improvement opportunities
 - **Insights dashboard** -- built-in web dashboard shows scores, beam search results, challenge badges, cross-validation, and mutation history
@@ -116,6 +124,11 @@ my-agent: 91/100 (91%)
 | `kultiv daemon start` | Start the background automation daemon |
 | `kultiv daemon stop` | Stop the daemon |
 | `kultiv scan` | Analyze agent prompts for purpose, structure, and recommendations |
+| `kultiv dream run` | Consolidate memory across recent Claude Code sessions; emits `.kultiv/dreams/patterns.md` |
+| `kultiv dream list` | Show recent dream runs with status and cost |
+| `kultiv dream apply <id>` | Apply a proposed dream's memory updates to the live tier |
+| `kultiv dream reject <id>` | Move a proposed dream to `rejected/` |
+| `kultiv dream patterns` | Print the active patterns the mutation engine consumes |
 | `kultiv dashboard` | Open the web dashboard at localhost:4200 |
 
 All commands accept `-c, --config <path>` to use a custom config file (defaults to `.kultiv/config.yaml`).

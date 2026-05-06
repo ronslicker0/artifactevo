@@ -1,7 +1,10 @@
+import { resolve, join } from 'node:path';
 import type { EvoConfig } from '../core/config.js';
 import { acquireLock, releaseLock } from './lock.js';
 import { getPending, clearPending, hasPending } from './pending.js';
 import { evolve } from '../loops/evolve.js';
+import { runDream } from '../dreaming/dreamer.js';
+import { createProvider } from '../llm/factory.js';
 
 // ── ANSI Colors ─────────────────────────────────────────────────────────
 
@@ -34,7 +37,6 @@ function parseScheduleToMs(schedule: string | undefined, fallbackMinutes: number
 // ── PID File ────────────────────────────────────────────────────────────
 
 import { writeFileSync, unlinkSync, existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
 
 function pidPath(evoDir: string): string {
   return join(evoDir, 'daemon.pid');
@@ -111,6 +113,14 @@ export async function startDaemon(config: EvoConfig, evoDir: string): Promise<vo
       console.error(red(`Daemon tick error: ${String(err)}`));
     }
 
+    if (config.dreaming.enabled) {
+      try {
+        await dreamingTick(config, evoDir);
+      } catch (err) {
+        console.error(red(`Dreaming tick error: ${String(err)}`));
+      }
+    }
+
     // Wait for next tick
     if (running) {
       await sleep(intervalMs);
@@ -153,6 +163,78 @@ async function tick(config: EvoConfig, evoDir: string, batchSize: number): Promi
   } finally {
     releaseLock(evoDir);
   }
+}
+
+// ── Dreaming Tick ───────────────────────────────────────────────────────
+
+async function dreamingTick(config: EvoConfig, evoDir: string): Promise<void> {
+  const memoryDir = config.dreaming.memory_dir
+    ? resolve(config.dreaming.memory_dir)
+    : defaultMemoryDir();
+  const sessionsDir = config.dreaming.sessions_dir
+    ? resolve(config.dreaming.sessions_dir)
+    : defaultSessionsDir();
+  const archivePath = join(evoDir, 'archive.jsonl');
+
+  const llmConfig = config.dreaming.model
+    ? { ...config.llm, model: config.dreaming.model }
+    : config.llm;
+  const provider = createProvider(llmConfig);
+
+  const out = await runDream(
+    {
+      evoDir,
+      memoryDir,
+      sessionsDir,
+      archivePath,
+      provider,
+      modelId: llmConfig.model,
+      inputCostPerMTok: config.dreaming.input_cost_per_mtok,
+      outputCostPerMTok: config.dreaming.output_cost_per_mtok,
+      maxSessions: config.dreaming.max_sessions,
+      withinDays: config.dreaming.within_days,
+      instructions: config.dreaming.instructions,
+    },
+    {
+      cooldownHours: config.dreaming.cooldown_hours,
+      autoApply: config.dreaming.auto_apply,
+    },
+  );
+
+  if (out.skipped === 'cooldown') {
+    // Silent — dreams run rarely; not worth a log line per tick.
+    return;
+  }
+
+  if (out.result.status === 'completed') {
+    console.log(
+      green(`[${timestamp()}] Dream ${out.result.id} — ${out.result.patterns.length} patterns, $${out.result.estimatedCostUsd.toFixed(4)}${out.applied ? ' (applied)' : ' (proposed)'}`),
+    );
+  } else if (out.skipped) {
+    console.log(dim(`[${timestamp()}] Dream skipped: ${out.skipped}`));
+  } else if (out.result.status === 'failed') {
+    console.error(red(`[${timestamp()}] Dream failed: ${out.result.error}`));
+  }
+}
+
+function defaultMemoryDir(): string {
+  const home = process.env.USERPROFILE ?? process.env.HOME ?? '.';
+  const projectSlug = process.cwd()
+    .replace(/[/\\]/g, '-')
+    .replace(/[^A-Za-z0-9.-]/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
+  return join(home, '.claude', 'projects', projectSlug, 'memory');
+}
+
+function defaultSessionsDir(): string {
+  const home = process.env.USERPROFILE ?? process.env.HOME ?? '.';
+  const projectSlug = process.cwd()
+    .replace(/[/\\]/g, '-')
+    .replace(/[^A-Za-z0-9.-]/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
+  return join(home, '.claude', 'projects', projectSlug);
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────

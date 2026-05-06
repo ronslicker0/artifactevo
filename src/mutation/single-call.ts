@@ -19,6 +19,8 @@ export interface MutationContext {
   failureContext?: FailureContext;
   /** Structural analysis from kultiv scan */
   scanAnalysis?: ScanAnalysis;
+  /** Pre-rendered Markdown block of dream-surfaced focus areas (cross-session patterns). */
+  dreamFocusAreas?: string;
 }
 
 // ── Single-Call Mutation Proposer ────────────────────────────────────────
@@ -91,7 +93,7 @@ ${scorecardBlock}
 
 ## Recent Archive History (last ${context.archiveHistory.length})
 ${historyBlock}
-${buildFailureBlock(context)}${buildScanBlock(context)}
+${buildFailureBlock(context)}${buildScanBlock(context)}${buildDreamBlock(context)}
 ## Task
 Analyze the artifact and scorecard. Propose ONE mutation that will improve the score.
 ${context.failureContext ? '- If production failures are listed above, prioritize mutations that directly address those failure patterns.\n' : ''}
@@ -132,6 +134,11 @@ function buildScanBlock(context: MutationContext): string {
     .map((r) => `- [${r.priority}] ${r.type}: ${r.target} — ${r.rationale}`)
     .join('\n');
   return `\n## Agent Analysis\nPurpose: ${context.scanAnalysis.purpose}\nDomain: ${context.scanAnalysis.domain}\n\n### Recommendations\n${recs}\n`;
+}
+
+function buildDreamBlock(context: MutationContext): string {
+  if (!context.dreamFocusAreas || context.dreamFocusAreas.trim().length === 0) return '';
+  return `\n${context.dreamFocusAreas.trim()}\n`;
 }
 
 // ── Output Parser ───────────────────────────────────────────────────────

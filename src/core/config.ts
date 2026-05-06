@@ -77,6 +77,32 @@ const DashboardConfigSchema = z.object({
   open_browser: z.boolean().default(true),
 });
 
+const DreamingConfigSchema = z.object({
+  enabled: z.boolean().default(false),
+  /** Path to the markdown memory tier the dreamer consolidates. */
+  memory_dir: z.string().optional(),
+  /** Path to Claude Code session JSONL files. */
+  sessions_dir: z.string().optional(),
+  /** Override the model for dreaming (otherwise reuse the top-level llm config). */
+  model: z.string().optional(),
+  /** Max number of recent sessions fed to the dreamer per run. */
+  max_sessions: z.number().int().min(1).max(100).default(20),
+  /** Lookback window in days for session selection. */
+  within_days: z.number().int().min(1).max(180).default(14),
+  /** Cooldown hours between scheduled dream runs. */
+  cooldown_hours: z.number().int().min(1).max(168).default(6),
+  /** Auto-apply proposed memory updates without manual review. Default false. */
+  auto_apply: z.boolean().default(false),
+  /** Optional cron-like schedule for daemon-driven dreams. */
+  schedule: z.string().optional(),
+  /** USD per million input tokens for cost estimation. */
+  input_cost_per_mtok: z.number().nonnegative().default(3),
+  /** USD per million output tokens for cost estimation. */
+  output_cost_per_mtok: z.number().nonnegative().default(15),
+  /** Optional per-run instructions appended to the dream prompt. */
+  instructions: z.string().optional(),
+});
+
 const EvoConfigSchema = z.object({
   version: z.string(),
   artifacts: z.record(z.string(), ArtifactConfigSchema),
@@ -86,6 +112,7 @@ const EvoConfigSchema = z.object({
   outer_loop: OuterLoopConfigSchema.default({}),
   automation: AutomationConfigSchema.default({}),
   dashboard: DashboardConfigSchema.default({}),
+  dreaming: DreamingConfigSchema.default({}),
   meta_strategy_path: z.string().default('.kultiv/meta-strategy.md'),
 });
 
@@ -100,6 +127,7 @@ export type FeedbackConfig = z.infer<typeof FeedbackConfigSchema>;
 export type OuterLoopConfig = z.infer<typeof OuterLoopConfigSchema>;
 export type AutomationConfig = z.infer<typeof AutomationConfigSchema>;
 export type DashboardConfig = z.infer<typeof DashboardConfigSchema>;
+export type DreamingConfig = z.infer<typeof DreamingConfigSchema>;
 export type EvoConfig = z.infer<typeof EvoConfigSchema>;
 
 // ── Loader ───────────────────────────────────────────────────────────────

@@ -53,7 +53,7 @@ ${context.artifact}
 ${scorecardBlock}
 ${checksBlock ? `\n### Per-Criterion Breakdown\n${checksBlock}` : ''}
 ${rubricBlock}
-${buildFailureSection(context)}${buildScanSection(context)}## Recent Archive History (last ${context.archiveHistory.length})
+${buildFailureSection(context)}${buildScanSection(context)}${buildDreamSection(context)}## Recent Archive History (last ${context.archiveHistory.length})
 ${historyBlock}
 
 ## Task: EXPLORE
@@ -260,4 +260,9 @@ function buildScanSection(context: MutationContext): string {
     .map((r) => `- [${r.priority}] **${r.type}**: ${r.target} — ${r.rationale}`)
     .join('\n');
   return `## Agent Analysis (from kultiv scan)\nPurpose: ${context.scanAnalysis.purpose}\nDomain: ${context.scanAnalysis.domain}\n${recs ? `\n### Recommendations\n${recs}\n` : ''}\n`;
+}
+
+function buildDreamSection(context: MutationContext): string {
+  if (!context.dreamFocusAreas || context.dreamFocusAreas.trim().length === 0) return '';
+  return `${context.dreamFocusAreas.trim()}\n\n`;
 }
